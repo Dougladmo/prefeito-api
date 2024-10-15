@@ -14,6 +14,9 @@ connectDB();
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 
+const reportRoutes = require("./routes/reportRoutes");
+app.use("/reports", reportRoutes);
+
 // Rota inicial
 app.get("/", (req, res) => {
   res.status(200).json({ msg: "Bem vindo à API" });
