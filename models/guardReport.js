@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const guardReportSchema = new mongoose.Schema({
   type: { 
     type: String, 
-    enum: ["pichacao", "descarte-irregular", "ocupacao-area-publica"], // Tipos permitidos para GuardReport
+    enum: ["dano-patrimonio-publico", "pichacao", "descarte-irregular", "ocupacao-area-publica"], // Tipos permitidos para GuardReport
     required: true 
   },
   description: { 
@@ -26,13 +26,8 @@ const guardReportSchema = new mongoose.Schema({
   },
   image: { 
     type: String, // URL ou caminho da imagem do relatório
-    required: true // Pode ser opcional, dependendo do uso
+    required: true
   },
-  reporterId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', // Referência ao modelo de usuário
-    required: true 
-  }
 });
 
 // Criando o modelo

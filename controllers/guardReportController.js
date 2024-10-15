@@ -1,4 +1,4 @@
-const GuardReport = require('../models/GuardReport'); // Ajuste o caminho conforme necessário
+const GuardReport = require('../models/guardReport');
 
 // Criar um novo GuardReport
 exports.createReport = async (req, res) => {
