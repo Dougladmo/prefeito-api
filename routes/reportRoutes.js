@@ -27,6 +27,9 @@ const {
   getPublicLightingReportsByUserId 
 } = require('../controllers/PublicLightingReport');
 
+// Importando o controller de relatórios do usuário
+const { getAllReportsByUserId } = require('../controllers/userReportsController');
+
 const { guardReport } = require('../middlewares/reportsMiddleware'); // Ajuste o caminho conforme necessário
 
 // Rotas para GuardReport
@@ -52,5 +55,8 @@ router.get('/publicLightingReports/user/:userId', getPublicLightingReportsByUser
 router.post('/publicLightingReport', guardReport, createPublicLightingReport); // Criar um novo relatório de iluminação pública
 router.put('/publicLightingReport/:id', updatePublicLightingReportById); // Atualizar relatório de iluminação pública por ID
 router.delete('/publicLightingReport/:id', deletePublicLightingReportById); // Deletar relatório de iluminação pública por ID
+
+// Nova rota para obter todos os relatórios de um usuário específico
+router.get('/user/:userId', getAllReportsByUserId); // Obter todos os relatórios de um usuário específico
 
 module.exports = router;
