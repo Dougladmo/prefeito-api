@@ -3,7 +3,10 @@ const PublicLightingReport = require('../models/publicLightingReport');
 // Criar um novo PublicLightingReport
 exports.createPublicLightingReport = async (req, res) => {
   try {
-    const newPublicLightingReport = new PublicLightingReport(req.body);
+    const newPublicLightingReport = new PublicLightingReport({
+      ...req.body, // Usando o corpo da requisição
+      userId: req.body.userId // Adicionando o ID do usuário ao novo relatório
+    });
     await newPublicLightingReport.save();
     res.status(201).json(newPublicLightingReport);
   } catch (err) {
@@ -29,6 +32,22 @@ exports.getPublicLightingReportById = async (req, res) => {
       return res.status(404).json({ message: 'Relatório de Iluminação Pública não encontrado' });
     }
     res.status(200).json(publicLightingReport);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Obter todos os PublicLightingReports de um ID/Usuário específico
+exports.getPublicLightingReportsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params; // Obtém o userId da rota
+    const reports = await PublicLightingReport.find({ userId }); // Consulta os relatórios com o userId especificado
+
+    if (reports.length === 0) {
+      return res.status(404).json({ message: 'Nenhum relatório encontrado para este usuário.' });
+    }
+
+    res.status(200).json(reports);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

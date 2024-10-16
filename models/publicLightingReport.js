@@ -31,6 +31,11 @@ const publicLightingReportSchema = new mongoose.Schema({
     type: String, // URL da imagem do relatório
     required: true
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true
+  }, 
 });
 
 // Criando o modelo

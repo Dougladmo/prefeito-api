@@ -28,6 +28,11 @@ const guardReportSchema = new mongoose.Schema({
     type: String, // URL ou caminho da imagem do relatório
     required: true
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true
+  }, 
 });
 
 // Criando o modelo

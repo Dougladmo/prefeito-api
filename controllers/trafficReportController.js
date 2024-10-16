@@ -3,7 +3,10 @@ const TrafficReport = require('../models/trafficReport');
 // Criar um novo TrafficReport
 exports.createTrafficReport = async (req, res) => {
   try {
-    const newTrafficReport = new TrafficReport(req.body);
+    const newTrafficReport = new TrafficReport({
+      ...req.body, // Usando o corpo da requisição
+      userId: req.body.userId // Adicionando o ID do usuário ao novo relatório
+    });
     await newTrafficReport.save();
     res.status(201).json(newTrafficReport);
   } catch (err) {
@@ -29,6 +32,22 @@ exports.getTrafficReportById = async (req, res) => {
       return res.status(404).json({ message: 'Relatório de Trânsito não encontrado' });
     }
     res.status(200).json(trafficReport);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Obter todos os TrafficReports de um usuário específico
+exports.getTrafficReportsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params; // Obtém o userId da rota
+    const trafficReports = await TrafficReport.find({ userId }); // Consulta os relatórios com o userId especificado
+
+    if (trafficReports.length === 0) {
+      return res.status(404).json({ message: 'Nenhum relatório encontrado para este usuário.' });
+    }
+
+    res.status(200).json(trafficReports);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
