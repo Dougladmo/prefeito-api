@@ -1,10 +1,13 @@
 const mongoose = require('mongoose');
 
-// Definindo o esquema de GuardReport
-const guardReportSchema = new mongoose.Schema({
+// Definindo o esquema de PublicLightingReport
+const publicLightingReportSchema = new mongoose.Schema({
   type: { 
     type: String, 
-    enum: ["dano-patrimonio-publico", "pichacao", "descarte-irregular", "ocupacao-area-publica"], // Tipos permitidos para GuardReport
+    enum: [
+      "troca-de-postes", 
+      "troca-de-lampadas"
+    ], // Tipos permitidos para PublicLightingReport
     required: true 
   },
   description: { 
@@ -15,9 +18,9 @@ const guardReportSchema = new mongoose.Schema({
     lat: { type: Number, required: true }, // Latitude
     lng: { type: Number, required: true }  // Longitude
   },
-  status: { 
+  statusReport: { 
     type: String, 
-    enum: ["pendente", "em andamento", "resolvido"], // Status permitidos
+    enum: ["pendente", "em andamento", "resolvido"], // Status geral do relatório
     default: "pendente" 
   },
   date: { 
@@ -25,7 +28,7 @@ const guardReportSchema = new mongoose.Schema({
     default: Date.now 
   },
   image: { 
-    type: String, // URL ou caminho da imagem do relatório
+    type: String, // URL da imagem do relatório
     required: true
   },
   userId: {
@@ -36,6 +39,6 @@ const guardReportSchema = new mongoose.Schema({
 });
 
 // Criando o modelo
-const GuardReport = mongoose.model('GuardReport', guardReportSchema);
+const PublicLightingReport = mongoose.model('PublicLightingReport', publicLightingReportSchema);
 
-module.exports = GuardReport;
+module.exports = PublicLightingReport;

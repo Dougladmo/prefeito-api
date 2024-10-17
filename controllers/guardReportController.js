@@ -3,7 +3,10 @@ const GuardReport = require('../models/guardReport');
 // Criar um novo GuardReport
 exports.createReport = async (req, res) => {
   try {
-    const newReport = new GuardReport(req.body);
+    const newReport = new GuardReport({
+      ...req.body, // Usando o corpo da requisição
+      userId: req.body.userId // Adicionando o ID do usuário ao novo relatório
+    });
     await newReport.save();
     res.status(201).json(newReport);
   } catch (err) {
@@ -29,6 +32,22 @@ exports.getReportById = async (req, res) => {
       return res.status(404).json({ message: 'Relatório não encontrado' });
     }
     res.status(200).json(report);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Obter todos os guard reports de um ID/Usuário especifico
+exports.getReportsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params; // Obtém o userId da rota
+    const reports = await GuardReport.find({ userId }); // Consulta os relatórios com o userId especificado
+
+    if (reports.length === 0) {
+      return res.status(404).json({ message: 'Nenhum relatório encontrado para este usuário.' });
+    }
+
+    res.status(200).json(reports);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

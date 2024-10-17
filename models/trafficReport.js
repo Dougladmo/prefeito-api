@@ -22,7 +22,7 @@ const trafficReportSchema = new mongoose.Schema({
   },
   statusReport: { 
     type: String, 
-    enum: ["pendente", "em andamento", "resolvido"], // Status geral do relatório
+    enum: ["pendente", "em andamento", "resolvido"],
     default: "pendente" 
   },
   date: { 
@@ -30,9 +30,14 @@ const trafficReportSchema = new mongoose.Schema({
     default: Date.now 
   },
   image: { 
-    type: String, // URL da imagem do relatório
+    type: String,
     required: true
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true
+  }, 
 });
 
 // Criando o modelo
