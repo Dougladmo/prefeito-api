@@ -74,7 +74,7 @@ exports.register = async (req, res) => {
 
     await sgMail.send(msg);
     
-    res.status(201).json({ msg: "Usuário criado com sucesso. Verifique seu email para confirmar sua conta." });
+    res.status(201).json({ msg: "Usuário Administrador criado com sucesso. Verifique seu email para confirmar sua conta." });
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: "Erro interno no servidor" });
@@ -93,7 +93,7 @@ exports.resendVerificationEmail = async (req, res) => {
     const user = await AdmUser.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
+      return res.status(404).json({ msg: "Usuário Administrador não encontrado." });
     }
 
     // Verifica se o email já foi verificado
@@ -156,9 +156,9 @@ exports.verifyEmail = async (req, res) => {
   console.log("Token recebido:", token); // Log do token recebido
 
   try {
-    // Busca o usuário pelo token
+    // Busca o usuário Administrador pelo token
     const user = await AdmUser.findOne({ verificationToken: token });
-    console.log("Usuário encontrado:", user); // Log do usuário encontrado
+    console.log("Usuário Administrador encontrado:", user); // Log do usuário Administrador encontrado
 
     if (!user) {
       return res.status(400).json({ msg: "Token inválido." });
@@ -194,7 +194,7 @@ exports.login = async (req, res) => {
     const user = await AdmUser.findOne({ email });
     
     if (!user) {
-      return res.status(422).json({ msg: "Usuário não encontrado" });
+      return res.status(422).json({ msg: "Usuário Administrador não encontrado" });
     }
 
     // Verifica se o email foi confirmado
@@ -228,7 +228,7 @@ exports.forgotPassword = async (req, res) => {
   try {
     const user = await AdmUser.findOne({ email });
     if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
+      return res.status(404).json({ msg: "Usuário Administrador não encontrado." });
     }
 
     const secret = process.env.ADM_SECRET;
@@ -290,7 +290,7 @@ exports.resetPassword = async (req, res) => {
     const user = await AdmUser.findById(decoded.id);
 
     if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
+      return res.status(404).json({ msg: "Usuário Administrador não encontrado." });
     }
 
     const salt = await bcrypt.genSalt(12);
@@ -311,7 +311,7 @@ exports.getUser = async (req, res) => {
   try {
     const user = await AdmUser.findById(id, "-password");
     if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado" });
+      return res.status(404).json({ msg: "Usuário Administrador não encontrado" });
     }
     res.status(200).json({ user });
   } catch (error) {
@@ -332,7 +332,7 @@ exports.resendResetPasswordEmail = async (req, res) => {
     const user = await AdmUser.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
+      return res.status(404).json({ msg: "Usuário Administrador não encontrado." });
     }
 
     // Gera um novo token de redefinição de senha
