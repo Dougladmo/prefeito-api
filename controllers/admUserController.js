@@ -1,13 +1,13 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sgMail = require("@sendgrid/mail");
-const User = require("../models/User");
+const AdmUser = require("../models/admUser");
 const crypto = require("crypto");
 
 // Configurando a API do SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Registro do usuário com envio de email de verificação
+// Registro do administrador com envio de email de verificação
 exports.register = async (req, res) => {
   const { name, email, password, confirmpassword } = req.body;
 
@@ -18,7 +18,7 @@ exports.register = async (req, res) => {
     return res.status(422).json({ msg: "As senhas não conferem" });
   }
 
-  const userExists = await User.findOne({ email });
+  const userExists = await AdmUser.findOne({ email });
   if (userExists) {
     return res.status(422).json({ msg: "O Email já está cadastrado" });
   }
@@ -29,7 +29,7 @@ exports.register = async (req, res) => {
   // Gera um token de verificação aleatório
   const verificationToken = crypto.randomBytes(32).toString("hex");
 
-  const user = new User({
+  const user = new AdmUser({
     name,
     email,
     password: passwordHash,
@@ -40,12 +40,13 @@ exports.register = async (req, res) => {
     await user.save();
 
     // Envia email de verificação
-    const verificationLink = `http://localhost:3000/auth/verify-email/${verificationToken}`;
+    const verificationLink = `http://localhost:3000/auth/verify-email/adm/${verificationToken}`;
     const msg = {
       to: user.email,
       from: process.env.EMAIL_USER,
       subject: "Verifique seu Email",
-      html: `
+      html: 
+      `
         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
@@ -89,7 +90,7 @@ exports.resendVerificationEmail = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await AdmUser.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ msg: "Usuário não encontrado." });
@@ -106,14 +107,15 @@ exports.resendVerificationEmail = async (req, res) => {
     await user.save();
 
     // Gera o link de verificação
-    const verificationLink = `http://localhost:3000/auth/verify-email/${verificationToken}`;
+    const verificationLink = `http://localhost:3000/auth/verify-email/adm/${verificationToken}`;
 
     // Envia o email de verificação
     const msg = {
       to: user.email,
       from: process.env.EMAIL_USER,
       subject: "Reenvio de Verificação de Email",
-      html: `
+      html: 
+      `
         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
@@ -148,14 +150,15 @@ exports.resendVerificationEmail = async (req, res) => {
   }
 };
 
-
 // Verificação de email
 exports.verifyEmail = async (req, res) => {
   const { token } = req.params;
+  console.log("Token recebido:", token); // Log do token recebido
 
   try {
     // Busca o usuário pelo token
-    const user = await User.findOne({ verificationToken: token });
+    const user = await AdmUser.findOne({ verificationToken: token });
+    console.log("Usuário encontrado:", user); // Log do usuário encontrado
 
     if (!user) {
       return res.status(400).json({ msg: "Token inválido." });
@@ -178,7 +181,8 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-// Função para login do usuário
+
+// Função para login do administrador
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -187,7 +191,7 @@ exports.login = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await AdmUser.findOne({ email });
     
     if (!user) {
       return res.status(422).json({ msg: "Usuário não encontrado" });
@@ -203,7 +207,7 @@ exports.login = async (req, res) => {
       return res.status(422).json({ msg: "Senha incorreta!" });
     }
 
-    const secret = process.env.SECRET;
+    const secret = process.env.ADM_SECRET;
     const token = jwt.sign({ id: user._id }, secret);
 
     res.status(200).json({ msg: "Logado com sucesso!", token });
@@ -212,7 +216,6 @@ exports.login = async (req, res) => {
     res.status(500).json({ msg: "Erro interno no servidor" });
   }
 };
-
 
 // Função para recuperação de senha
 exports.forgotPassword = async (req, res) => {
@@ -223,21 +226,22 @@ exports.forgotPassword = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await AdmUser.findOne({ email });
     if (!user) {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
-    const secret = process.env.SECRET + user.password;
+    const secret = process.env.ADM_SECRET;
     const token = jwt.sign({ id: user._id }, secret, { expiresIn: "15m" });
 
-    const link = `http://localhost:3000/auth/reset-password/${token}`;
+    const link = `http://localhost:3000/auth/adm/reset-password/${token}`;
 
     const msg = {
       to: user.email,
       from: process.env.EMAIL_USER,
       subject: "Recuperação de Senha",
-      html: `
+      html: 
+      `
         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
@@ -282,8 +286,8 @@ exports.resetPassword = async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.SECRET);
-    const user = await User.findById(decoded.id);
+    const decoded = jwt.verify(token, process.env.ADM_SECRET);
+    const user = await AdmUser.findById(decoded.id);
 
     if (!user) {
       return res.status(404).json({ msg: "Usuário não encontrado." });
@@ -300,12 +304,12 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// Função para obter usuário autenticado
+// Função para obter administrador autenticado
 exports.getUser = async (req, res) => {
   const id = req.params.id;
 
   try {
-    const user = await User.findById(id, "-password");
+    const user = await AdmUser.findById(id, "-password");
     if (!user) {
       return res.status(404).json({ msg: "Usuário não encontrado" });
     }
@@ -325,25 +329,25 @@ exports.resendResetPasswordEmail = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await AdmUser.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
     // Gera um novo token de redefinição de senha
-    const secret = process.env.SECRET + user.password;
+    const secret = process.env.ADM_SECRET;
     const resetToken = jwt.sign({ id: user._id }, secret, { expiresIn: "15m" });
 
-    const resetLink = `http://localhost:3000/auth/reset-password/${resetToken}`;
+    const resetLink = `http://localhost:3000/auth/adm/reset-password/${resetToken}`;
 
-    // Envia o email de redefinição de senha
     const msg = {
       to: user.email,
       from: process.env.EMAIL_USER,
       subject: "Reenvio de Redefinição de Senha",
-      html: `
-        <!DOCTYPE html>
+      html: 
+      `
+         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
           <meta charset="UTF-8">
