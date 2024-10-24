@@ -3,16 +3,18 @@ const express = require("express");
 const connectDB = require("./config/db");
 const multer = require('multer');
 const path = require('path');
+const cors = require('cors'); // Importando o CORS
 
 const app = express();
 
-// Middleware para parse de JSON
+app.use(cors());
+
+
 app.use(express.json());
 
-// Conectar ao MongoDB
 connectDB();
 
-// Importar rotas
+
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 

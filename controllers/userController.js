@@ -2,7 +2,6 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sgMail = require("@sendgrid/mail");
 const User = require("../models/User");
-const crypto = require("crypto");
 
 // Configurando a API do SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -26,21 +25,20 @@ exports.register = async (req, res) => {
   const salt = await bcrypt.genSalt(12);
   const passwordHash = await bcrypt.hash(password, salt);
 
-  // Gera um token de verificação aleatório
-  const verificationToken = crypto.randomBytes(32).toString("hex");
+  // Gera um código de verificação aleatório
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
   const user = new User({
     name,
     email,
     password: passwordHash,
-    verificationToken, // Armazena o token
+    verificationCode,
   });
 
   try {
     await user.save();
 
     // Envia email de verificação
-    const verificationLink = `http://localhost:3000/auth/verify-email/${verificationToken}`;
     const msg = {
       to: user.email,
       from: process.env.EMAIL_USER,
@@ -58,8 +56,9 @@ exports.register = async (req, res) => {
             <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
             <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
               <h1 style="color: #333; text-align: left; font-size: 22px;">Confirme seu Email</h1>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Clique no botão abaixo para confirmar seu email:</p>
-              <a href="${verificationLink}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 20px; text-align: center; text-decoration: none; border-radius: 5px; margin: 10px 0;">Confirmar Email</a>
+              <p style="font-size: 16px; color: #555; line-height: 1.5;">Use o código abaixo para confirmar seu email:</p>
+              <h2 style="font-size: 28px; text-align: center; color: #007bff;">${verificationCode}</h2>
+              <p style="font-size: 16px; color: #555; line-height: 1.5;">Esse código é válido por 15 minutos.</p>
               <p style="font-size: 16px; color: #555; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
             </div>
             <div>
@@ -72,7 +71,7 @@ exports.register = async (req, res) => {
     };
 
     await sgMail.send(msg);
-    
+
     res.status(201).json({ msg: "Usuário criado com sucesso. Verifique seu email para confirmar sua conta." });
   } catch (error) {
     console.error(error);
@@ -80,85 +79,20 @@ exports.register = async (req, res) => {
   }
 };
 
-// Função para reenvio de email de verificação
-exports.resendVerificationEmail = async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(422).json({ msg: "O email é obrigatório." });
-  }
-
-  try {
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
-    }
-
-    // Verifica se o email já foi verificado
-    if (user.isVerified) {
-      return res.status(400).json({ msg: "Email já verificado." });
-    }
-
-    // Gera um novo token de verificação
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    user.verificationToken = verificationToken;
-    await user.save();
-
-    // Gera o link de verificação
-    const verificationLink = `http://localhost:3000/auth/verify-email/${verificationToken}`;
-
-    // Envia o email de verificação
-    const msg = {
-      to: user.email,
-      from: process.env.EMAIL_USER,
-      subject: "Reenvio de Verificação de Email",
-      html: `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Confirmação de E-mail</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
-            <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
-              <h1 style="color: #333; text-align: left; font-size: 22px;">Confirme seu Email</h1>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Clique no botão abaixo para confirmar seu email:</p>
-              <a href="${verificationLink}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 20px; text-align: center; text-decoration: none; border-radius: 5px; margin: 10px 0;">Confirmar Email</a>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
-            </div>
-            <div>
-              <p style="text-align: left; font-size: 12px;">Se você tiver problemas com sua conta, entre em contato conosco.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
-    };
-
-    await sgMail.send(msg);
-
-    res.status(200).json({ msg: "Email de verificação reenviado com sucesso!" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Erro ao reenviar o email de verificação." });
-  }
-};
-
-
 // Verificação de email
 exports.verifyEmail = async (req, res) => {
-  const { token } = req.params;
+  const { email, verificationCode } = req.body;
+
+  if (!email || !verificationCode) {
+    return res.status(400).json({ msg: "Email e código são obrigatórios." });
+  }
 
   try {
-    // Busca o usuário pelo token
-    const user = await User.findOne({ verificationToken: token });
+    // Busca o usuário pelo email e código de verificação
+    const user = await User.findOne({ email, verificationCode });
 
     if (!user) {
-      return res.status(400).json({ msg: "Token inválido." });
+      return res.status(400).json({ msg: "Código inválido ou usuário não encontrado." });
     }
 
     // Verifica se o e-mail já foi verificado
@@ -166,9 +100,9 @@ exports.verifyEmail = async (req, res) => {
       return res.status(400).json({ msg: "E-mail já verificado." });
     }
 
-    // Atualiza o campo isVerified para true e remove o token
+    // Atualiza o campo isVerified para true e remove o código
     user.isVerified = true;
-    user.verificationToken = null;
+    user.verificationCode = null;
     await user.save();
 
     res.status(200).json({ msg: "Email verificado com sucesso!" });
@@ -188,7 +122,7 @@ exports.login = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(422).json({ msg: "Usuário não encontrado" });
     }
@@ -213,7 +147,6 @@ exports.login = async (req, res) => {
   }
 };
 
-
 // Função para recuperação de senha
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -228,11 +161,17 @@ exports.forgotPassword = async (req, res) => {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
-    const secret = process.env.SECRET + user.password;
-    const token = jwt.sign({ id: user._id }, secret, { expiresIn: "15m" });
+    // Gera um código de 6 dígitos
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const link = `http://localhost:3000/auth/reset-password/${token}`;
+    // Define o tempo de expiração do código (15 minutos)
+    const expires = Date.now() + 15 * 60 * 1000;
 
+    user.resetPasswordCode = resetCode;
+    user.resetPasswordExpires = expires;
+    await user.save();
+
+    // Envia o código de redefinição por e-mail
     const msg = {
       to: user.email,
       from: process.env.EMAIL_USER,
@@ -249,10 +188,10 @@ exports.forgotPassword = async (req, res) => {
           <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
             <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
             <h1 style="font-size: 24px; color: #333;">Redefinição de Senha</h1>
-            <p style="font-size: 16px; color: #555;">Clique no link abaixo para redefinir sua senha:</p>
-            <a href="${link}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 20px; text-align: center; text-decoration: none; border-radius: 5px; margin: 10px 0;">Redefinir Senha</a>
-            <p style="font-size: 16px; color: #555;">Se você não solicitou uma redefinição de senha, pode ignorar este e-mail.</p>
-            <p style="font-size: 14px; color: #999;">Este link expirará em 15 minutos.</p>
+            <p style="font-size: 16px; color: #555;">Use o código abaixo para redefinir sua senha:</p>
+            <h2 style="font-size: 28px; text-align: center; color: #007bff;">${resetCode}</h2>
+            <p style="font-size: 16px; color: #555;">Este código expirará em 15 minutos.</p>
+            <p style="font-size: 16px; color: #555;">Se você não solicitou a redefinição de senha, pode ignorar este e-mail.</p>
           </div>
         </body>
         </html>
@@ -261,114 +200,68 @@ exports.forgotPassword = async (req, res) => {
 
     await sgMail.send(msg);
 
-    res.status(200).json({ msg: "Email enviado com sucesso!" });
+    res.status(200).json({ msg: "Código de redefinição enviado para o e-mail." });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Erro interno no servidor." });
+    res.status(500).json({ msg: "Erro ao enviar o e-mail." });
   }
 };
 
-// Função para redefinir a senha
+// Redefinir a senha
 exports.resetPassword = async (req, res) => {
-  const { newpassword, confirmpassword } = req.body;
-  const { token } = req.params;
+  const { email, resetCode, newPassword, confirmNewPassword } = req.body;
 
-  if (!newpassword || !confirmpassword) {
-    return res.status(400).json({ msg: "Preencha todos os campos." });
+  if (!email || !resetCode || !newPassword || !confirmNewPassword) {
+    return res.status(400).json({ msg: "Todos os campos são obrigatórios." });
   }
 
-  if (newpassword !== confirmpassword) {
+  if (newPassword !== confirmNewPassword) {
     return res.status(400).json({ msg: "As senhas não conferem." });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.SECRET);
-    const user = await User.findById(decoded.id);
+    const user = await User.findOne({ email, resetPasswordCode: resetCode });
 
     if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
+      return res.status(400).json({ msg: "Código de redefinição inválido." });
+    }
+
+    // Verifica se o código expirou
+    if (user.resetPasswordExpires < Date.now()) {
+      return res.status(400).json({ msg: "O código de redefinição expirou." });
     }
 
     const salt = await bcrypt.genSalt(12);
-    user.password = await bcrypt.hash(newpassword, salt);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Atualiza a senha e remove o código de recuperação
+    user.password = passwordHash;
+    user.resetPasswordCode = null;
+    user.resetPasswordExpires = null;
+
     await user.save();
 
-    res.status(200).json({ msg: "Senha atualizada com sucesso!" });
+    res.status(200).json({ msg: "Senha redefinida com sucesso!" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Erro interno no servidor." });
+    res.status(500).json({ msg: "Erro ao redefinir a senha." });
   }
 };
 
-// Função para obter usuário autenticado
+// Função para buscar usuário pelo ID
 exports.getUser = async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params; // Captura o ID da requisição
 
   try {
-    const user = await User.findById(id, "-password");
-    if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado" });
-    }
-    res.status(200).json({ user });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Erro interno no servidor" });
-  }
-};
-
-// Função para reenviar email de redefinição de senha
-exports.resendResetPasswordEmail = async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(422).json({ msg: "O email é obrigatório." });
-  }
-
-  try {
-    const user = await User.findOne({ email });
+    const user = await User.findById(id).select("-password -verificationCode"); // Exclui campos sensíveis da resposta
 
     if (!user) {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
-    // Gera um novo token de redefinição de senha
-    const secret = process.env.SECRET + user.password;
-    const resetToken = jwt.sign({ id: user._id }, secret, { expiresIn: "15m" });
-
-    const resetLink = `http://localhost:3000/auth/reset-password/${resetToken}`;
-
-    // Envia o email de redefinição de senha
-    const msg = {
-      to: user.email,
-      from: process.env.EMAIL_USER,
-      subject: "Reenvio de Redefinição de Senha",
-      html: `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Redefinição de Senha</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
-            <h1 style="font-size: 24px; color: #333;">Redefinição de Senha</h1>
-            <p style="font-size: 16px; color: #555;">Clique no link abaixo para redefinir sua senha:</p>
-            <a href="${resetLink}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 20px; text-align: center; text-decoration: none; border-radius: 5px; margin: 10px 0;">Redefinir Senha</a>
-            <p style="font-size: 16px; color: #555;">Se você não solicitou uma redefinição de senha, pode ignorar este e-mail.</p>
-            <p style="font-size: 14px; color: #999;">Este link expirará em 15 minutos.</p>
-          </div>
-        </body>
-        </html>
-      `,
-    };
-
-    await sgMail.send(msg);
-
-    res.status(200).json({ msg: "Email de redefinição de senha reenviado com sucesso!" });
+    res.status(200).json(user); // Retorna o usuário encontrado
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Erro ao reenviar o email de redefinição de senha." });
+    res.status(500).json({ msg: "Erro ao buscar o usuário." });
   }
 };
