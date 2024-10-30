@@ -14,9 +14,15 @@ app.use(express.json());
 
 connectDB();
 
-
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
+
+const reportRoutes = require("./routes/reportRoutes");
+app.use("/reports", reportRoutes);
+
+const cityRoutes = require("./routes/cityRoutes");
+app.use("/city", cityRoutes);
+
 
 // Configuração do multer para armazenamento local
 const storage = multer.diskStorage({
@@ -43,9 +49,6 @@ const dir = './uploads';
 if (!fs.existsSync(dir)) {
   fs.mkdirSync(dir);
 }
-
-const reportRoutes = require("./routes/reportRoutes");
-app.use("/reports", reportRoutes);
 
 // Rota inicial
 app.get("/", (req, res) => {

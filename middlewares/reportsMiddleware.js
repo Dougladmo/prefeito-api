@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 // Middleware para capturar o ID do usuário a partir do token
-exports.guardReport = async (req, res, next) => {
+exports.reportsMiddleware = async (req, res, next) => {
   const token = req.headers["authorization"]?.split(" ")[1]; // Extrai o token do header Authorization
 
   if (!token) {
