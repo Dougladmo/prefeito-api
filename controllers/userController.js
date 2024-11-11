@@ -248,18 +248,25 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// Função para buscar usuário pelo ID
 exports.getUser = async (req, res) => {
-  const { id } = req.params; // Captura o ID da requisição
+  const token = req.headers.authorization?.split(' ')[1]; // Captura o token do cabeçalho Authorization
+
+  if (!token) {
+    return res.status(401).json({ msg: "Acesso negado. Token não fornecido." });
+  }
 
   try {
-    const user = await User.findById(id).select("-password -verificationCode"); // Exclui campos sensíveis da resposta
+
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userId = decoded.id;
+
+    const user = await User.findById(userId).select("-password -verificationCode -resetPasswordCode"); 
 
     if (!user) {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
-    res.status(200).json(user); // Retorna o usuário encontrado
+    res.status(200).json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: "Erro ao buscar o usuário." });

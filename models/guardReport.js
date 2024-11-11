@@ -4,20 +4,16 @@ const mongoose = require('mongoose');
 const guardReportSchema = new mongoose.Schema({
   type: { 
     type: String, 
-    enum: ["dano-patrimonio-publico", "pichacao", "descarte-irregular", "ocupacao-area-publica"], // Tipos permitidos para GuardReport
-    required: true 
   },
   description: { 
     type: String, 
-    required: true 
   },
   location: { 
-    lat: { type: Number, required: true }, // Latitude
-    lng: { type: Number, required: true }  // Longitude
+    type: String, 
   },
   status: { 
     type: String, 
-    enum: ["pendente", "em andamento", "resolvido"], // Status permitidos
+    enum: ["pendente", "em andamento", "resolvido"],
     default: "pendente" 
   },
   date: { 
@@ -25,14 +21,12 @@ const guardReportSchema = new mongoose.Schema({
     default: Date.now 
   },
   image: { 
-    type: String, // URL ou caminho da imagem do relatório
-    required: true
+    type: String,
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
-    required: true
-  }, 
+  },
 });
 
 // Criando o modelo
