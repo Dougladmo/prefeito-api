@@ -92,6 +92,12 @@ Este documento detalha os modelos e exemplos de requisições HTTP para cada um 
 
 ---
 
+# Documentação da API
+
+Este documento detalha os modelos e exemplos de requisições HTTP para cada um dos recursos da API.
+
+---
+
 ## 1. AdmUser
 
 Modelo para criação de usuários administradores.
@@ -176,10 +182,7 @@ Modelo para criação de um relatório de iluminação pública.
 {
   "type": "troca-de-postes",
   "description": "Descrição do problema de iluminação",
-  "location": {
-    "lat": -23.5505,
-    "lng": -46.6333
-  },
+  "location": "Rua Exemplo, 123",
   "statusReport": "pendente",
   "image": "URL_da_imagem",
   "userId": "ID_do_usuario_relacionado"
@@ -235,32 +238,6 @@ Modelo para criação de usuários comuns.
   "verificationCodeExpires": "2024-01-01T00:00:00.000Z",
   "resetPasswordCode": "codigoDeRedefinicao",
   "resetPasswordExpires": "2024-01-01T00:00:00.000Z"
-}
-```
-
----
-
-## 7. UserFeedback
-
-Modelo para criação de feedbacks de usuários.
-
-### Exemplo de Requisição (`POST` /user-feedbacks)
-
-- **URL**: `/user-feedbacks`
-- **Método**: `POST`
-
-**Body**:
-```json
-{
-  "sportsAndLeisure": 5, // nota de 1 a 5 sobre esportes e lazer
-  "culture": 4, // nota de 1 a 5 sobre cultura
-  "education": 3, // nota de 1 a 5 sobre Educação
-  "health": 5, // nota de 1 a 5 sobre saúde
-  "safety": 4, // nota de 1 a 5 sobre segurança
-  "mobilityAndTraffic": 3, // nota de 1 a 5 Mobilidade e trafégo
-  "publicWorksAndServices": 4, // nota de 1 a 5 sobre trabalhos e serviços
-  "comments": "Excelente serviço!",
-  "userId": "ID_do_usuario_relacionado"
 }
 ```
 
