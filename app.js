@@ -14,9 +14,6 @@ app.use(express.json());
 
 connectDB();
 
-const authRoutes = require("./routes/authRoutes");
-app.use("/auth", authRoutes);
-
 const authRoutes = require("./src/routes/authRoutes");
 app.use("/auth", authRoutes);
 
