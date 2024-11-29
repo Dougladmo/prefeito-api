@@ -147,6 +147,73 @@ exports.login = async (req, res) => {
   }
 };
 
+// Função para reenvio de email de verificação
+exports.resendVerificationEmail = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(422).json({ msg: "O email é obrigatório." });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ msg: "Usuário não encontrado." });
+    }
+
+    // Verifica se o email já foi verificado
+    if (user.isVerified) {
+      return res.status(400).json({ msg: "Email já verificado." });
+    }
+
+    // Gera um código de verificação aleatório de 6 dígitos
+    const NewVerificationCode = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+
+    user.verificationCode = NewVerificationCode;
+    await user.save();
+
+    // Envia o email de verificação
+    const msg = {
+      to: user.email,
+      from: process.env.EMAIL_USER,
+      subject: "Reenvio de Verificação de Email",
+      html: `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Confirmação de E-mail</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
+            <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
+              <h1 style="color: #333; text-align: left; font-size: 22px;">Confirme seu Email</h1>
+              <p style="font-size: 16px; color: #555; line-height: 1.5;">Use o código abaixo para confirmar seu email:</p>
+              <h2 style="font-size: 28px; text-align: center; color: #007bff;">${NewVerificationCode}</h2>
+              <p style="font-size: 16px; color: #555; line-height: 1.5;">Esse código é válido por 15 minutos.</p>
+              <p style="font-size: 16px; color: #555; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
+            </div>
+            <div>
+              <p style="text-align: left; font-size: 12px;">Se você tiver problemas com sua conta, entre em contato conosco.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await sgMail.send(msg);
+
+    res.status(200).json({ msg: "Email de verificação reenviado com sucesso!" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Erro ao reenviar o email de verificação." });
+  }
+};
+
 // Função para recuperação de senha
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;

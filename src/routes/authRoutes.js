@@ -10,6 +10,7 @@ router.post("/login", userController.login);
 router.post("/forgot-password", userController.forgotPassword); // Envia o código de 6 dígitos
 router.post("/reset-password", userController.resetPassword); // Redefine a senha com o código de 6 dígitos
 router.post("/verify-email/user", userController.verifyEmail); // Verifica o email com o código
+router.post("/resend-verification-email", userController.resendVerificationEmail);
 
 // Rotas de autenticação para administradores
 router.post("/adm/register", admUserController.register);

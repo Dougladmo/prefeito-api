@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const connectDB = require("./config/db");
+const connectDB = require("./src/config/db");
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors'); // Importando o CORS
@@ -14,10 +14,23 @@ app.use(express.json());
 
 connectDB();
 
+<<<<<<< Updated upstream
 
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 
+=======
+const authRoutes = require("./src/routes/authRoutes");
+app.use("/auth", authRoutes);
+
+const reportRoutes = require("./src/routes/reportRoutes");
+app.use("/reports", reportRoutes);
+
+const cityRoutes = require("./src/routes/cityRoutes");
+app.use("/city", cityRoutes);
+
+
+>>>>>>> Stashed changes
 // Configuração do multer para armazenamento local
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -39,7 +52,7 @@ const upload = multer({
 
 // Criando pasta 'uploads' se não existir
 const fs = require('fs');
-const dir = './uploads';
+const dir = './src/uploads';
 if (!fs.existsSync(dir)) {
   fs.mkdirSync(dir);
 }
