@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const connectDB = require("./src/config/db");
+const connectDB = require("./config/db");
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors'); // Importando o CORS
@@ -14,13 +14,13 @@ app.use(express.json());
 
 connectDB();
 
-const authRoutes = require("./src/routes/authRoutes");
+const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 
-const reportRoutes = require("./src/routes/reportRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 app.use("/reports", reportRoutes);
 
-const cityRoutes = require("./src/routes/cityRoutes");
+const cityRoutes = require("./routes/cityRoutes");
 app.use("/city", cityRoutes);
 
 // Configuração do multer para armazenamento local
