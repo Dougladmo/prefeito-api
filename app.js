@@ -14,12 +14,9 @@ app.use(express.json());
 
 connectDB();
 
-<<<<<<< Updated upstream
-
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 
-=======
 const authRoutes = require("./src/routes/authRoutes");
 app.use("/auth", authRoutes);
 
@@ -29,8 +26,6 @@ app.use("/reports", reportRoutes);
 const cityRoutes = require("./src/routes/cityRoutes");
 app.use("/city", cityRoutes);
 
-
->>>>>>> Stashed changes
 // Configuração do multer para armazenamento local
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -56,9 +51,6 @@ const dir = './src/uploads';
 if (!fs.existsSync(dir)) {
   fs.mkdirSync(dir);
 }
-
-const reportRoutes = require("./routes/reportRoutes");
-app.use("/reports", reportRoutes);
 
 // Rota inicial
 app.get("/", (req, res) => {

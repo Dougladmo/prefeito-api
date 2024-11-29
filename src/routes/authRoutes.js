@@ -26,7 +26,7 @@ router.post("/adm/resend-verification-email", admUserController.resendVerificati
 router.post("/adm/resend-reset-password-email", admUserController.resendResetPasswordEmail);
 
 // Rota privada para buscar usuário
-router.get("/users/:id", checkToken, userController.getUser);
+router.get("/users", checkToken, userController.getUser);
 
 // Rota privada para buscar administrador
 router.get("/adm/users/:id", checkToken, admUserController.getUser);
