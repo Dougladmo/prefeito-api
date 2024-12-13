@@ -5,12 +5,13 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
-  verificationCode: { type: String }, // Campo para armazenar o código de verificação de 6 dígitos
-  verificationCodeExpires: { type: Date }, // Campo para armazenar a data de expiração do código de verificação
-  resetPasswordCode: { type: String }, // Campo para armazenar o código de redefinição de senha
-  resetPasswordExpires: { type: Date }, // Campo para armazenar a data de expiração do código de redefinição
+  verificationCode: { type: String },
+  verificationCodeExpires: { type: Date },
+  resetPasswordCode: { type: String },
+  resetPasswordExpires: { type: Date },
+  bairro: { type: String, required: false },
+  dateOfBirth: { type: Date, required: false },
 });
 
-// Exporta o modelo User
 const User = mongoose.model('User', UserSchema);
 module.exports = User;
