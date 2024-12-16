@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sgMail = require("@sendgrid/mail");
-const AdmUser = require("../models/admUser");
+const AdmUser = require("../models/AdmUser");
 const crypto = require("crypto");
 
 // Configurando a API do SendGrid
