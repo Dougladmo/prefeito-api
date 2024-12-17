@@ -46,7 +46,6 @@ exports.register = async (req, res) => {
       createdAt: new Date().toISOString(),
     };
 
-    // Salva o usuário no DynamoDB
     const putParams = {
       TableName: "User", 
       Item: user,
@@ -394,7 +393,7 @@ exports.resendVerificationEmail = async (req, res) => {
 };
 
 exports.getUser = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Captura o token do cabeçalho Authorization
+  const token = req.headers.authorization?.split(' ')[1]; 
 
   if (!token) {
     return res.status(401).json({ msg: "Acesso negado. Token não fornecido." });
@@ -413,13 +412,18 @@ exports.getUser = async (req, res) => {
       },
     };
 
-    const result = await dynamoDB.get(params).promise();
+    const result = await dynamoDB.get(params);
 
     if (!result.Item) {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
     const user = result.Item;
+    // Removendo dados sensíveis
+    delete user.password;
+    delete user.verificationCode;
+    delete user.resetCode;
+
     res.status(200).json(user);
   } catch (error) {
     console.error(error);
