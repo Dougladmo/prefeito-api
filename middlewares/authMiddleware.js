@@ -10,7 +10,12 @@ const checkToken = (req, res, next) => {
 
   try {
     const secret = process.env.SECRET;
-    jwt.verify(token, secret);
+    const decoded = jwt.verify(token, secret); // Decodifica o token
+
+    // Passa os dados do token decodificado para o req (sem mudar a estrutura)
+    req.tokenDecoded = decoded; 
+
+    // Passa o controle para o próximo middleware ou controlador
     next();
   } catch (error) {
     res.status(400).json({ msg: "Token inválido!" });

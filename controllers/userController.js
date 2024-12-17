@@ -401,15 +401,15 @@ exports.getUser = async (req, res) => {
   }
 
   try {
-    
-    const partKey = decoded._id; 
-    const Email = decoded.Email; 
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const partKey = decoded._id;
+    const Email = decoded.Email;
 
     const params = {
       TableName: "User",
       Key: {
-        _id: partKey, // Chave de Partição
-        Email: Email, // Chave de Classificação
+        _id: partKey,
+        Email: Email,
       },
     };
 
@@ -419,8 +419,7 @@ exports.getUser = async (req, res) => {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
-    const { password, verificationCode, resetPasswordCode, ...user } = result.Item;
-
+    const user = result.Item;
     res.status(200).json(user);
   } catch (error) {
     console.error(error);

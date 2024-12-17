@@ -13,6 +13,6 @@ router.post("/verify-email", userController.verifyEmail);
 router.post("/resend-verification-email", userController.resendVerificationEmail);
 
 // Rota privada para buscar as informações do usuário
-router.get("/user", checkToken, userController.getUser);
+router.get("/users", checkToken, userController.getUser);
 
 module.exports = router;
