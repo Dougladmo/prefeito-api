@@ -1,18 +1,24 @@
-const mongoose = require("mongoose");
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBDocument } = require("@aws-sdk/lib-dynamodb");
 
-const DB_USER = process.env.DB_USER
-const DB_PASS = process.env.DB_PASS
+// Configuração do cliente do DynamoDB
+const dynamoDBClient = new DynamoDBClient({
+  region: 'sa-east-1',  // Defina a região explicitamente
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
-const connectDB = async () => {
+const dynamoDB = DynamoDBDocument.from(dynamoDBClient);
+
+const connectDB = () => {
   try {
-    mongoose.connect(
-      `mongodb+srv://${DB_USER}:${DB_PASS}@cluster0.wiwdm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
-    );
-    console.log("Conectado ao MongoDB");
+    console.log("Conectado ao DynamoDB!");
   } catch (error) {
-    console.error("Erro ao conectar ao MongoDB", error);
+    console.error("Erro ao conectar ao DynamoDB:", error);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
+module.exports = { dynamoDB, connectDB };

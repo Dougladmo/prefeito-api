@@ -1,109 +1,123 @@
+const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
 const sgMail = require("@sendgrid/mail");
+const { dynamoDB } = require("../config/db");
 
-// Configurando a API do SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Registro do usuário com envio de email de verificação
 exports.register = async (req, res) => {
-  const { name, email, password, confirmpassword } = req.body;
+  const { name, Email, password, confirmpassword } = req.body;
 
-  if (!name || !email || !password || !confirmpassword) {
+  if (!name || !Email || !password || !confirmpassword) {
     return res.status(422).json({ msg: "Todos os campos são obrigatórios" });
   }
   if (password !== confirmpassword) {
     return res.status(422).json({ msg: "As senhas não conferem" });
   }
 
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    return res.status(422).json({ msg: "O Email já está cadastrado" });
-  }
-
-  const salt = await bcrypt.genSalt(12);
-  const passwordHash = await bcrypt.hash(password, salt);
-
-  // Gera um código de verificação aleatório
-  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-  const user = new User({
-    name,
-    email,
-    password: passwordHash,
-    verificationCode,
-  });
-
   try {
-    await user.save();
+    const params = {
+      TableName: "User",
+      IndexName: "Email-index", 
+      KeyConditionExpression: "Email = :Email", 
+      ExpressionAttributeValues: {
+        ":Email": Email,
+      },
+    };
+    
+    const result = await dynamoDB.query(params);
+    if (result.Items && result.Items.length > 0) {
+      return res.status(422).json({ msg: "O Email já está cadastrado" });
+    }
+    
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(password, salt);
 
-    // Envia email de verificação
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const user = {
+      _id: uuidv4(),
+      name,
+      Email,
+      password: passwordHash,
+      verificationCode,
+      isVerified: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Salva o usuário no DynamoDB
+    const putParams = {
+      TableName: "User", 
+      Item: user,
+    };
+
+    await dynamoDB.put(putParams);
+
     const msg = {
-      to: user.email,
+      to: user.Email,
       from: process.env.EMAIL_USER,
       subject: "Verifique seu Email",
-      html: `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Confirmação de E-mail</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
-            <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
-              <h1 style="color: #333; text-align: left; font-size: 22px;">Confirme seu Email</h1>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Use o código abaixo para confirmar seu email:</p>
-              <h2 style="font-size: 28px; text-align: center; color: #007bff;">${verificationCode}</h2>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Esse código é válido por 15 minutos.</p>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
-            </div>
-            <div>
-              <p style="text-align: left; font-size: 12px;">Se você tiver problemas com sua conta, entre em contato conosco.</p>
-            </div>
-          </div>
-        </body>
+      html: ` 
+        <html>
+          <body>
+            <h1>Confirme seu Email</h1>
+            <p>Use o código abaixo para confirmar seu Email:</p>
+            <h2>${verificationCode}</h2>
+          </body>
         </html>
       `,
     };
 
     await sgMail.send(msg);
 
-    res.status(201).json({ msg: "Usuário criado com sucesso. Verifique seu email para confirmar sua conta." });
+    res.status(201).json({ msg: "Usuário criado com sucesso. Verifique seu Email para confirmar sua conta." });
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: "Erro interno no servidor" });
   }
 };
 
-// Verificação de email
 exports.verifyEmail = async (req, res) => {
-  const { email, verificationCode } = req.body;
+  const { Email, verificationCode } = req.body;
 
-  if (!email || !verificationCode) {
+  if (!Email || !verificationCode) {
     return res.status(400).json({ msg: "Email e código são obrigatórios." });
   }
 
   try {
-    // Busca o usuário pelo email e código de verificação
-    const user = await User.findOne({ email, verificationCode });
+    const params = {
+      TableName: "User",
+      IndexName: "Email-index",
+      KeyConditionExpression: "Email = :Email", 
+      ExpressionAttributeValues: {
+        ":Email": Email,
+      },
+    };
+    
+    const result = await dynamoDB.query(params);
 
-    if (!user) {
+    if (!result.Items || result.Items.length === 0 || result.Items[0].verificationCode !== verificationCode) {
       return res.status(400).json({ msg: "Código inválido ou usuário não encontrado." });
     }
 
-    // Verifica se o e-mail já foi verificado
-    if (user.isVerified) {
+    if (result.Items[0].isVerified) {
       return res.status(400).json({ msg: "E-mail já verificado." });
     }
 
-    // Atualiza o campo isVerified para true e remove o código
-    user.isVerified = true;
-    user.verificationCode = null;
-    await user.save();
+    const updateParams = {
+      TableName: "User",
+      Key: {
+        Email: Email,
+      },
+      UpdateExpression: "set isVerified = :isVerified, verificationCode = :verificationCode",
+      ExpressionAttributeValues: {
+        ":isVerified": true,
+        ":verificationCode": null,
+      },
+    };
+
+    await dynamoDB.update(updateParams);
 
     res.status(200).json({ msg: "Email verificado com sucesso!" });
   } catch (error) {
@@ -112,33 +126,40 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-// Função para login do usuário
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const { Email, password } = req.body;
 
-  if (!email || !password) {
+  if (!Email || !password) {
     return res.status(422).json({ msg: "Email e senha são obrigatórios" });
   }
 
   try {
-    const user = await User.findOne({ email });
+    const params = {
+      TableName: "User",
+      IndexName: "Email-index",
+      KeyConditionExpression: "Email = :Email", 
+      ExpressionAttributeValues: {
+        ":Email": Email,
+      },
+    };
 
-    if (!user) {
+    const result = await dynamoDB.query(params);
+
+    if (!result.Items || result.Items.length === 0) {
       return res.status(422).json({ msg: "Usuário não encontrado" });
     }
 
-    // Verifica se o email foi confirmado
-    if (!user.isVerified) {
+    if (!result.Items[0].isVerified) {
       return res.status(403).json({ msg: "E-mail ainda não verificado. Por favor, verifique seu e-mail." });
     }
 
-    const checkPassword = await bcrypt.compare(password, user.password);
+    const checkPassword = await bcrypt.compare(password, result.Items[0].password);
     if (!checkPassword) {
       return res.status(422).json({ msg: "Senha incorreta!" });
     }
 
     const secret = process.env.SECRET;
-    const token = jwt.sign({ id: user._id }, secret);
+    const token = jwt.sign({ Email: result.Items[0].Email }, secret);
 
     res.status(200).json({ msg: "Logado com sucesso!", token });
   } catch (error) {
@@ -147,195 +168,222 @@ exports.login = async (req, res) => {
   }
 };
 
-// Função para reenvio de email de verificação
-exports.resendVerificationEmail = async (req, res) => {
-  const { email } = req.body;
+exports.forgotPassword = async (req, res) => {
+  const { Email } = req.body;
 
-  if (!email) {
-    return res.status(422).json({ msg: "O email é obrigatório." });
+  if (!Email) {
+    return res.status(422).json({ msg: "Email é obrigatório" });
   }
 
   try {
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
-    }
-
-    // Verifica se o email já foi verificado
-    if (user.isVerified) {
-      return res.status(400).json({ msg: "Email já verificado." });
-    }
-
-    // Gera um código de verificação aleatório de 6 dígitos
-    const NewVerificationCode = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-
-    user.verificationCode = NewVerificationCode;
-    await user.save();
-
-    // Envia o email de verificação
-    const msg = {
-      to: user.email,
-      from: process.env.EMAIL_USER,
-      subject: "Reenvio de Verificação de Email",
-      html: `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Confirmação de E-mail</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
-            <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
-              <h1 style="color: #333; text-align: left; font-size: 22px;">Confirme seu Email</h1>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Use o código abaixo para confirmar seu email:</p>
-              <h2 style="font-size: 28px; text-align: center; color: #007bff;">${NewVerificationCode}</h2>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Esse código é válido por 15 minutos.</p>
-              <p style="font-size: 16px; color: #555; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
-            </div>
-            <div>
-              <p style="text-align: left; font-size: 12px;">Se você tiver problemas com sua conta, entre em contato conosco.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
+    const params = {
+      TableName: "User",
+      IndexName: "Email-index", 
+      KeyConditionExpression: "Email = :Email", 
+      ExpressionAttributeValues: {
+        ":Email": Email, 
+      },
     };
 
-    await sgMail.send(msg);
+    const result = await dynamoDB.query(params);
 
-    res.status(200).json({ msg: "Email de verificação reenviado com sucesso!" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Erro ao reenviar o email de verificação." });
-  }
-};
-
-// Função para recuperação de senha
-exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ msg: "O e-mail é obrigatório." });
-  }
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
+    if (!result.Items || result.Items.length === 0) {
+      return res.status(404).json({ msg: "Usuário não encontrado" });
     }
 
-    // Gera um código de 6 dígitos
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Define o tempo de expiração do código (15 minutos)
-    const expires = Date.now() + 15 * 60 * 1000;
+    const updateParams = {
+      TableName: "User",
+      Key: {
+        Email: Email,
+      },
+      UpdateExpression: "set resetCode = :resetCode",
+      ExpressionAttributeValues: {
+        ":resetCode": resetCode,
+      },
+    };
 
-    user.resetPasswordCode = resetCode;
-    user.resetPasswordExpires = expires;
-    await user.save();
+    await dynamoDB.update(updateParams);
 
-    // Envia o código de redefinição por e-mail
     const msg = {
-      to: user.email,
+      to: result.Items[0].Email,
       from: process.env.EMAIL_USER,
-      subject: "Recuperação de Senha",
-      html: `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Redefinição de Senha</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
-            <h1 style="font-size: 24px; color: #333;">Redefinição de Senha</h1>
-            <p style="font-size: 16px; color: #555;">Use o código abaixo para redefinir sua senha:</p>
-            <h2 style="font-size: 28px; text-align: center; color: #007bff;">${resetCode}</h2>
-            <p style="font-size: 16px; color: #555;">Este código expirará em 15 minutos.</p>
-            <p style="font-size: 16px; color: #555;">Se você não solicitou a redefinição de senha, pode ignorar este e-mail.</p>
-          </div>
-        </body>
+      subject: "Código de Recuperação de Senha",
+      html: ` 
+        <html>
+          <body>
+            <h1>Código de Recuperação de Senha</h1>
+            <p>Use o código abaixo para redefinir sua senha:</p>
+            <h2>${resetCode}</h2>
+          </body>
         </html>
       `,
     };
 
     await sgMail.send(msg);
 
-    res.status(200).json({ msg: "Código de redefinição enviado para o e-mail." });
+    res.status(200).json({ msg: "Código de recuperação enviado para o seu e-mail" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Erro ao enviar o e-mail." });
+    res.status(500).json({ msg: "Erro ao enviar o código de recuperação" });
   }
 };
 
-// Redefinir a senha
 exports.resetPassword = async (req, res) => {
-  const { email, resetCode, newPassword, confirmNewPassword } = req.body;
+  const { Email, resetCode, newPassword } = req.body;
 
-  if (!email || !resetCode || !newPassword || !confirmNewPassword) {
-    return res.status(400).json({ msg: "Todos os campos são obrigatórios." });
-  }
-
-  if (newPassword !== confirmNewPassword) {
-    return res.status(400).json({ msg: "As senhas não conferem." });
+  if (!Email || !resetCode || !newPassword) {
+    return res.status(422).json({ msg: "Email, código de reset e nova senha são obrigatórios" });
   }
 
   try {
-    const user = await User.findOne({ email, resetPasswordCode: resetCode });
+    const params = {
+      TableName: "User",
+      IndexName: "Email-index",
+      KeyConditionExpression: "Email = :Email",
+      ExpressionAttributeValues: {
+        ":Email": Email,
+      },
+    };
 
-    if (!user) {
-      return res.status(400).json({ msg: "Código de redefinição inválido." });
+    const result = await dynamoDB.query(params);
+
+    if (!result.Items || result.Items.length === 0) {
+      return res.status(404).json({ msg: "Usuário não encontrado" });
     }
 
-    // Verifica se o código expirou
-    if (user.resetPasswordExpires < Date.now()) {
-      return res.status(400).json({ msg: "O código de redefinição expirou." });
+    if (result.Items[0].resetCode !== resetCode) {
+      return res.status(400).json({ msg: "Código inválido" });
     }
 
     const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Atualiza a senha e remove o código de recuperação
-    user.password = passwordHash;
-    user.resetPasswordCode = null;
-    user.resetPasswordExpires = null;
+    const updateParams = {
+      TableName: "User",
+      Key: {
+        Email: Email, 
+      },
+      UpdateExpression: "set password = :password, resetCode = :resetCode",
+      ExpressionAttributeValues: {
+        ":password": hashedPassword,
+        ":resetCode": null,
+      },
+    };
 
-    await user.save();
+    await dynamoDB.update(updateParams);
 
-    res.status(200).json({ msg: "Senha redefinida com sucesso!" });
+    res.status(200).json({ msg: "Senha redefinida com sucesso" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Erro ao redefinir a senha." });
+    res.status(500).json({ msg: "Erro ao redefinir a senha" });
+  }
+};
+
+exports.resendVerificationEmail = async (req, res) => {
+  const { Email } = req.body;
+
+  if (!Email) {
+    return res.status(422).json({ msg: "Email é obrigatório" });
+  }
+
+  try {
+    const params = {
+      TableName: "User",
+      IndexName: "Email-index",
+      KeyConditionExpression: "Email = :Email", 
+      ExpressionAttributeValues: {
+        ":Email": Email,
+      },
+    };
+
+    const result = await dynamoDB.query(params);
+
+    if (!result.Items || result.Items.length === 0) {
+      return res.status(404).json({ msg: "Usuário não encontrado" });
+    }
+
+    const user = result.Items[0]; 
+
+    if (user.isVerified) {
+      return res.status(400).json({ msg: "E-mail já verificado." });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const updateParams = {
+      TableName: "User",
+      Key: {
+        Email: Email,
+      },
+      UpdateExpression: "set verificationCode = :verificationCode",
+      ExpressionAttributeValues: {
+        ":verificationCode": verificationCode,
+      },
+    };
+
+    await dynamoDB.update(updateParams);
+
+    const msg = {
+      to: user.Email,
+      from: process.env.EMAIL_USER,
+      subject: "Verifique seu Email",
+      html: ` 
+        <html>
+          <body>
+            <h1>Confirme seu Email</h1>
+            <p>Use o código abaixo para confirmar seu Email:</p>
+            <h2>${verificationCode}</h2>
+          </body>
+        </html>
+      `,
+    };
+
+    await sgMail.send(msg);
+
+    res.status(200).json({ msg: "Email de verificação reenviado com sucesso." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Erro ao reenviar o email de verificação" });
   }
 };
 
 exports.getUser = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Captura o token do cabeçalho Authorization
+  const token = req.headers.authorization?.split(" ")[1]; 
 
   if (!token) {
-    return res.status(401).json({ msg: "Acesso negado. Token não fornecido." });
+    return res.status(401).json({ msg: "Token não fornecido" });
   }
 
   try {
+    
+    const decoded = verifyToken(token); 
+    const userId = decoded._id;
 
-    const decoded = jwt.verify(token, process.env.SECRET);
-    const userId = decoded.id;
+    const params = {
+      TableName: "User",
+      Key: {
+        _id: userId,
+      },
+    };
 
-    const user = await User.findById(userId).select("-password -verificationCode -resetPasswordCode"); 
+    const result = await dynamoDB.get(params).promise();
 
-    if (!user) {
-      return res.status(404).json({ msg: "Usuário não encontrado." });
+    if (!result.Item) {
+      return res.status(404).json({ msg: "Usuário não encontrado" });
     }
 
-    res.status(200).json(user);
+    const user = result.Item;
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.Email,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Erro ao buscar o usuário." });
+    res.status(500).json({ msg: "Erro ao obter os dados do usuário" });
   }
 };
