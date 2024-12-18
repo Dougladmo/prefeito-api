@@ -1,10 +1,23 @@
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const sgMail = require("@sendgrid/mail");
 const { dynamoDB } = require("../config/db");
+const nodemailer = require("nodemailer");
+const { SESv2 } = require("@aws-sdk/client-sesv2");
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// Configuração do SES v3 para o envio de emails (AWS SDK v3)
+const ses = new SESv2({
+  region: 'sa-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
+
+const transporter = nodemailer.createTransport({
+  SES: { ses, aws: require('@aws-sdk/client-sesv2') }
+});
 
 exports.register = async (req, res) => {
   const { name, Email, password, confirmpassword } = req.body;
@@ -19,18 +32,18 @@ exports.register = async (req, res) => {
   try {
     const params = {
       TableName: "User",
-      IndexName: "Email-index", 
-      KeyConditionExpression: "Email = :Email", 
+      IndexName: "Email-index",
+      KeyConditionExpression: "Email = :Email",
       ExpressionAttributeValues: {
         ":Email": Email,
       },
     };
-    
+
     const result = await dynamoDB.query(params);
     if (result.Items && result.Items.length > 0) {
       return res.status(422).json({ msg: "O Email já está cadastrado" });
     }
-    
+
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
 
@@ -47,7 +60,7 @@ exports.register = async (req, res) => {
     };
 
     const putParams = {
-      TableName: "User", 
+      TableName: "User",
       Item: user,
     };
 
@@ -58,11 +71,34 @@ exports.register = async (req, res) => {
       from: process.env.EMAIL_USER,
       subject: "Verifique seu Email",
       html: ` 
-        yz
+         <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Confirmação de E-mail</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
+            <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
+              <h1 style="color: #333; text-align: center; margin-top: 15px; font-size: 22px;">Confirme seu Email</h1>
+              <p style="font-size: 16px; color: #555; text-align: center;">Use o código abaixo para confirmar seu email:</p>
+              <h2 style="font-size: 38px; text-align: center; color: #007bff;">${verificationCode}</h2>
+              <p style="font-size: 16px; color: #555; text-align: center; line-height: 1.5;">Esse código é válido por 15 minutos.</p>
+              <p style="font-size: 16px; color: #555; text-align: center; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
+            </div>
+            <div>
+              <p style="text-align: center; font-size: 12px; color: #555;">Se você tiver problemas com sua conta, entre em contato conosco.</p>
+            </div>
+          </div>
+        </body>
+        </html>
       `,
     };
 
-    await sgMail.send(msg);
+    // Enviar o e-mail através do SES com o Nodemailer
+    await transporter.sendMail(msg);
 
     res.status(201).json({ msg: "Usuário criado com sucesso. Verifique seu Email para confirmar sua conta." });
   } catch (error) {
