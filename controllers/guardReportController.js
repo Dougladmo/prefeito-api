@@ -1,17 +1,30 @@
-const GuardReport = require('../models/guardReport');
+const { dynamoDB } = require("../config/db");
+const { v4: uuidv4 } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 
-// Configurando a API do SendGrid
+const TABLE_NAME = "guardReport";
+
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Criar um novo GuardReport
 exports.createReport = async (req, res) => {
   try {
-    const newReport = new GuardReport({
-      ...req.body, // Usando o corpo da requisição
-      userId: req.body.userId // Adicionando o ID do usuário ao novo relatório
+    const newReport = {
+      _id: uuidv4(),
+      createdAt: new Date().toISOString(),
+      userId: req.body.userId,
+      type: req.body.type,
+      description: req.body.description,
+      location: req.body.location,
+      statusReport: req.body.statusReport,
+      image: req.body.image,
+      date: req.body.date
+    };
+
+  
+    await dynamoDB.put({
+      TableName: TABLE_NAME,
+      Item: newReport
     });
-    await newReport.save();
 
     const msg = {
       to: "douglas.moura.c2a@gmail.com",
@@ -63,66 +76,87 @@ exports.createReport = async (req, res) => {
   }
 };
 
-// Obter todos os GuardReports
 exports.getAllReports = async (req, res) => {
   try {
-    const reports = await GuardReport.find();
-    res.status(200).json(reports);
+    const params = {
+      TableName: TABLE_NAME
+    };
+
+    const result = await dynamoDB.scan(params);
+    res.status(200).json(result.Items);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Obter um GuardReport por ID
 exports.getReportById = async (req, res) => {
   try {
-    const report = await GuardReport.findById(req.params.id);
-    if (!report) {
+    const { id,  createdAt } = req.params;
+
+    const params = {
+      TableName: TABLE_NAME,
+      Key: {
+        _id: id,
+        createdAt:  createdAt,
+      },
+    };
+
+    const result = await dynamoDB.get(params);
+    if (!result.Item) {
       return res.status(404).json({ message: 'Relatório não encontrado' });
     }
-    res.status(200).json(report);
+    res.status(200).json(result.Item);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Obter todos os guard reports de um ID/Usuário especifico
-exports.getReportsByUserId = async (req, res) => {
-  try {
-    const { userId } = req.params; // Obtém o userId da rota
-    const reports = await GuardReport.find({ userId }); // Consulta os relatórios com o userId especificado
-
-    if (reports.length === 0) {
-      return res.status(404).json({ message: 'Nenhum relatório encontrado para este usuário.' });
-    }
-
-    res.status(200).json(reports);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Atualizar um GuardReport por ID
 exports.updateReportById = async (req, res) => {
   try {
-    const updatedReport = await GuardReport.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!updatedReport) {
-      return res.status(404).json({ message: 'Relatório não encontrado' });
-    }
-    res.status(200).json(updatedReport);
+    const { id, createdAt } = req.params;
+
+    const params = {
+      TableName: TABLE_NAME,
+      Key: {
+        _id: id,
+        createdAt: createdAt,
+      },
+      UpdateExpression: "set #description = :description, #location = :location, #statusReport = :statusReport",
+      ExpressionAttributeNames: {
+        "#description": "description",
+        "#location": "location",
+        "#statusReport": "statusReport"
+      },
+      ExpressionAttributeValues: {
+        ":description": req.body.description,
+        ":location": req.body.location,
+        ":statusReport": req.body.statusReport
+      },
+      ReturnValues: "ALL_NEW"
+    };
+
+    const result = await dynamoDB.update(params);
+    res.status(200).json(result.Attributes);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
 
-// Deletar um GuardReport por ID
 exports.deleteReportById = async (req, res) => {
   try {
-    const deletedReport = await GuardReport.findByIdAndDelete(req.params.id);
-    if (!deletedReport) {
-      return res.status(404).json({ message: 'Relatório não encontrado' });
-    }
-    res.status(204).send(); // No Content
+    const { id, createdAt } = req.params;
+
+    const params = {
+      TableName: TABLE_NAME,
+      Key: {
+        _id: id,
+        createdAt: createdAt,
+      },
+    };
+
+    await dynamoDB.delete(params);
+
+    res.status(204).json({ msg: "Relatório deletado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
