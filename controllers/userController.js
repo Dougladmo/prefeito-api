@@ -6,7 +6,6 @@ const nodemailer = require("nodemailer");
 const { SESv2 } = require("@aws-sdk/client-sesv2");
 
 
-// Configuração do SES v3 para o envio de emails (AWS SDK v3)
 const ses = new SESv2({
   region: 'sa-east-1',
   credentials: {

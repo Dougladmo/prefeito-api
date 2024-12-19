@@ -1,10 +1,80 @@
 const { dynamoDB } = require("../config/db");
 const { v4: uuidv4 } = require("uuid");
-const sgMail = require("@sendgrid/mail");
-
+const {
+  SESClient,
+  SendEmailCommand,
+} = require("@aws-sdk/client-ses"); 
 const TABLE_NAME = "guardReport";
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const sesClient = new SESClient({
+  region: "sa-east-1", 
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+async function sendEmailWithSES(report) {
+  const params = {
+    Destination: {
+      ToAddresses: ["douglas.moura.c2a@gmail.com"],
+    },
+    Message: {
+      Subject: {
+        Data: "Relatório de denúncia do aplicativo",
+      },
+      Body: {
+        Html: {
+          Data: `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Detalhes do Relatório do aplicativo</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px;">
+              <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+                <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 120px; margin-bottom: 20px;">
+                
+                <h1 style="color: #333; font-size: 24px; text-align: center;">Detalhes do Relatório de Trânsito</h1>
+                
+                <div style="margin-top: 20px; border-top: 2px solid #007bff; padding-top: 20px;">
+                  <p style="font-size: 16px; color: #555;">ID do Relatório: <strong>${report._id}</strong></p>
+                  <p style="font-size: 16px; color: #555;">Tipo: <strong>${report.type}</strong></p>
+                  <p style="font-size: 16px; color: #555;">Descrição: <strong>${report.description}</strong></p>
+                  <p style="font-size: 16px; color: #555;">Localização: <strong>${report.location}</strong></p>
+                  <p style="font-size: 16px; color: #555;">Status: <strong>${report.statusReport}</strong></p>
+                  <p style="font-size: 16px; color: #555;">Data: <strong>${new Date(report.date).toLocaleString('pt-BR')}</strong></p>
+                </div>
+                
+                <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px;">
+                  <h2 style="font-size: 20px; color: #007bff;">Imagem do Relatório</h2>
+                  <img src="${report.image}" alt="Imagem do Relatório" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-top: 10px;">
+                </div>
+        
+                <div style="margin-top: 30px; font-size: 14px; color: #555;">
+                  <p style="text-align: center;">Se você tiver problemas com o seu relatório ou precisar de mais informações, entre em contato conosco.</p>
+                  <p style="text-align: center;">Atenciosamente,<br>Equipe de Suporte</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `,
+        },
+      },
+    },
+    Source: process.env.EMAIL_USER,
+  };
+
+  try {
+    const command = new SendEmailCommand(params);
+    const data = await sesClient.send(command);
+    console.log("Email enviado com sucesso!", data);
+  } catch (err) {
+    console.error("Erro ao enviar o email:", err);
+  }
+}
 
 exports.createReport = async (req, res) => {
   try {
@@ -17,58 +87,15 @@ exports.createReport = async (req, res) => {
       location: req.body.location,
       statusReport: req.body.statusReport,
       image: req.body.image,
-      date: req.body.date
+      date: req.body.date,
     };
 
-  
     await dynamoDB.put({
       TableName: TABLE_NAME,
-      Item: newReport
+      Item: newReport,
     });
 
-    const msg = {
-      to: "douglas.moura.c2a@gmail.com",
-      from: process.env.EMAIL_USER,
-      subject: "Relatório do aplicativo - Detalhes",
-      html: `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Detalhes do Relatório do aplicativo</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 120px; margin-bottom: 20px;">
-            
-            <h1 style="color: #333; font-size: 24px; text-align: center;">Detalhes do Relatório de Trânsito</h1>
-            
-            <div style="margin-top: 20px; border-top: 2px solid #007bff; padding-top: 20px;">
-              <p style="font-size: 16px; color: #555;">ID do Relatório: <strong>${newReport._id}</strong></p>
-              <p style="font-size: 16px; color: #555;">Tipo: <strong>${newReport.type}</strong></p>
-              <p style="font-size: 16px; color: #555;">Descrição: <strong>${newReport.description}</strong></p>
-              <p style="font-size: 16px; color: #555;">Localização: <strong>${newReport.location}</strong></p>
-              <p style="font-size: 16px; color: #555;">Status: <strong>${newReport.statusReport}</strong></p>
-              <p style="font-size: 16px; color: #555;">Data: <strong>${new Date(newReport.date).toLocaleString('pt-BR')}</strong></p>
-            </div>
-            
-            <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px;">
-              <h2 style="font-size: 20px; color: #007bff;">Imagem do Relatório</h2>
-              <img src="${newReport.image}" alt="Imagem do Relatório" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-top: 10px;">
-            </div>
-    
-            <div style="margin-top: 30px; font-size: 14px; color: #555;">
-              <p style="text-align: center;">Se você tiver problemas com o seu relatório ou precisar de mais informações, entre em contato conosco.</p>
-              <p style="text-align: center;">Atenciosamente,<br>Equipe de Suporte</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
-    };
-
-    await sgMail.send(msg);
+    await sendEmailWithSES(newReport);
 
     res.status(201).json(newReport);
   } catch (err) {
@@ -79,7 +106,7 @@ exports.createReport = async (req, res) => {
 exports.getAllReports = async (req, res) => {
   try {
     const params = {
-      TableName: TABLE_NAME
+      TableName: TABLE_NAME,
     };
 
     const result = await dynamoDB.scan(params);
@@ -91,13 +118,13 @@ exports.getAllReports = async (req, res) => {
 
 exports.getReportById = async (req, res) => {
   try {
-    const { id,  createdAt } = req.params;
+    const { id, createdAt } = req.params;
 
     const params = {
       TableName: TABLE_NAME,
       Key: {
         _id: id,
-        createdAt:  createdAt,
+        createdAt: createdAt,
       },
     };
 
@@ -125,14 +152,14 @@ exports.updateReportById = async (req, res) => {
       ExpressionAttributeNames: {
         "#description": "description",
         "#location": "location",
-        "#statusReport": "statusReport"
+        "#statusReport": "statusReport",
       },
       ExpressionAttributeValues: {
         ":description": req.body.description,
         ":location": req.body.location,
-        ":statusReport": req.body.statusReport
+        ":statusReport": req.body.statusReport,
       },
-      ReturnValues: "ALL_NEW"
+      ReturnValues: "ALL_NEW",
     };
 
     const result = await dynamoDB.update(params);
