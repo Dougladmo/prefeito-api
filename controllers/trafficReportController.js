@@ -139,6 +139,31 @@ exports.getTrafficReportById = async (req, res) => {
   }
 };
 
+exports.getReportsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const params = {
+      TableName: TABLE_NAME,
+      IndexName: "userId-index", // Nome do índice secundário global
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": userId,
+      },
+    };
+
+    const result = await dynamoDB.query(params).promise();
+
+    if (!result.Items || result.Items.length === 0) {
+      return res.status(404).json({ message: "Nenhum relatório encontrado para este usuário" });
+    }
+
+    res.status(200).json(result.Items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.updateTrafficReportById = async (req, res) => {
   try {
     const { id, createdAt } = req.params;
