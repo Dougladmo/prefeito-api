@@ -141,7 +141,7 @@ exports.getPublicLightingReportById = async (req, res) => {
   }
 };
 
-exports.getReportsByUserId = async (req, res) => {
+exports.getPublicLightReportsByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
 

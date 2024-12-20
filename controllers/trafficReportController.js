@@ -139,7 +139,7 @@ exports.getTrafficReportById = async (req, res) => {
   }
 };
 
-exports.getReportsByUserId = async (req, res) => {
+exports.getTrafficReportsByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
 
