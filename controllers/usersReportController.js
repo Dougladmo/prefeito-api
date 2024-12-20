@@ -38,7 +38,9 @@ exports.getAllReportsByUserId = async (req, res) => {
             return res.status(404).json({ message: "Nenhum relatório encontrado para este usuário" });
         }
 
-        res.status(200).json(allReports);
+        const sortedReports = allReports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        res.status(200).json(sortedReports);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
