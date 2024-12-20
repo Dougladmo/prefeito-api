@@ -129,7 +129,7 @@ exports.getReportsByUserId = async (req, res) => {
       },
     };
 
-    const result = await dynamoDB.query(params).promise();
+    const result = await dynamoDB.query(params);
 
     if (!result.Items || result.Items.length === 0) {
       return res.status(404).json({ message: "Nenhum relatório encontrado para este usuário" });
