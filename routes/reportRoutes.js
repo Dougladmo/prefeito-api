@@ -28,6 +28,8 @@ const {
   getPublicLightReportsByUserId
 } = require('../controllers/PublicLightingReport');
 
+const { getAllReportsByUserId } = require("../controllers/usersReportController")
+
 const userFeedbackController = require('../controllers/UserFeedbackController');
 const { reportsMiddleware } = require('../middlewares/reportsMiddleware');
 
@@ -51,6 +53,8 @@ router.get('/publicLightingReport/:userId', getPublicLightReportsByUserId);
 router.post('/publicLightingReport', reportsMiddleware, createPublicLightingReport);
 router.put('/publicLightingReport/:id/:createdAt', updatePublicLightingReport);
 router.delete('/publicLightingReport/:id/:createdAt', deletePublicLightingReport);
+
+router.get('/user/:userId', getAllReportsByUserId);
 
 router.post('/feedback', reportsMiddleware, userFeedbackController.createFeedback);
 router.get('/feedback', userFeedbackController.getAllFeedbacks);

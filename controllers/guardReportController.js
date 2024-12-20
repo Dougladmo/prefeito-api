@@ -122,7 +122,7 @@ exports.getReportsByUserId = async (req, res) => {
 
     const params = {
       TableName: TABLE_NAME,
-      IndexName: "userId-index", // Nome do índice secundário global
+      IndexName: "userId-index",
       KeyConditionExpression: "userId = :userId",
       ExpressionAttributeValues: {
         ":userId": userId,
