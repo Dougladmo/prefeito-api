@@ -1,11 +1,8 @@
-FROM node:latest
+FROM node:22.12
 
-WORKDIR /app
+WORKDIR /api
 
 COPY . .
-
-# dependências necessárias para compilar o bcrypt (usando Python 3)
-RUN apt-get update && apt-get install -y build-essential python3
 
 RUN rm -rf node_modules
 RUN npm install
