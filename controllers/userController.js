@@ -5,7 +5,6 @@ const { dynamoDB } = require("../config/db");
 const nodemailer = require("nodemailer");
 const { SESv2 } = require("@aws-sdk/client-sesv2");
 
-
 const ses = new SESv2({
   region: 'sa-east-1',
   credentials: {
@@ -14,12 +13,31 @@ const ses = new SESv2({
   }
 });
 
-const transporter = nodemailer.createTransport({
-  SES: { ses, aws: require('@aws-sdk/client-sesv2') }
-});
+const sendEmailWithSES = async (msg) => {
+  try {
+    const params = {
+      FromEmailAddress: process.env.EMAIL_USER,  // Endereço de e-mail de origem
+      Destination: {
+        ToAddresses: [msg.to],  // Destinatário do e-mail
+      },
+      Content: {
+        Simple: {
+          Subject: { Data: msg.subject },  // Assunto do e-mail
+          Body: { Data: msg.html },  // Corpo do e-mail em HTML
+        },
+      },
+    };
+
+    // Enviando o e-mail com SESv2
+    await ses.sendEmail(params);
+  } catch (error) {
+    console.error("Erro ao enviar e-mail:", error);
+    throw new Error("Erro ao enviar o e-mail");
+  }
+};
 
 exports.register = async (req, res) => {
-  const { name, Email, password, confirmpassword } = req.body;
+  const { name, Email, password, confirmpassword, phoneNumber, birthDate, userNeighborhood } = req.body;
 
   if (!name || !Email || !password || !confirmpassword) {
     return res.status(422).json({ msg: "Todos os campos são obrigatórios" });
@@ -51,8 +69,11 @@ exports.register = async (req, res) => {
     const user = {
       _id: uuidv4(),
       name,
+      phoneNumber,
       Email,
       password: passwordHash,
+      birthDate,
+      userNeighborhood,
       verificationCode,
       isVerified: false,
       createdAt: new Date().toISOString(),
@@ -67,7 +88,6 @@ exports.register = async (req, res) => {
 
     const msg = {
       to: user.Email,
-      from: process.env.EMAIL_USER,
       subject: "Verifique seu Email",
       html: ` 
          <!DOCTYPE html>
@@ -96,8 +116,8 @@ exports.register = async (req, res) => {
       `,
     };
 
-    // Enviar o e-mail através do SES com o Nodemailer
-    await transporter.sendMail(msg);
+    // Enviar o e-mail através do SES com a função customizada
+    // await sendEmailWithSES(msg);
 
     res.status(201).json({ msg: "Usuário criado com sucesso. Verifique seu Email para confirmar sua conta." });
   } catch (error) {
@@ -105,6 +125,7 @@ exports.register = async (req, res) => {
     res.status(500).json({ msg: "Erro interno no servidor" });
   }
 };
+
 
 exports.verifyEmail = async (req, res) => {
   const { Email, verificationCode } = req.body;

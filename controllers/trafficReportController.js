@@ -78,6 +78,8 @@ async function sendEmailWithSES(report) {
 }
 
 exports.createTrafficReport = async (req, res) => {
+  const allowedStatus = ["Em andamento", "Resolvido", "Não resolvido"];
+
   try {
     const newReport = {
       _id: uuidv4(),
@@ -86,7 +88,8 @@ exports.createTrafficReport = async (req, res) => {
       type: req.body.type,
       description: req.body.description,
       location: req.body.location,
-      statusReport: req.body.statusReport,
+      Neighborhood: req.body.Neighborhood,
+      statusReport: allowedStatus.includes(req.body.statusReport) ? req.body.statusReport : "Em andamento",
       image: req.body.image,
       date: req.body.date,
     };
