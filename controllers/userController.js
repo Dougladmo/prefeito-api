@@ -1,11 +1,9 @@
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const { dynamoDB } = require("../config/db");
-const nodemailer = require("nodemailer");
-const { SESv2 } = require("@aws-sdk/client-sesv2");
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 
-const ses = new SESv2({
+const ses = new SESClient({
   region: 'sa-east-1',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -14,56 +12,48 @@ const ses = new SESv2({
 });
 
 const sendEmailWithSES = async (msg) => {
-  try {
-    const params = {
-      FromEmailAddress: process.env.EMAIL_USER,  // Endereço de e-mail de origem
-      Destination: {
-        ToAddresses: [msg.to],  // Destinatário do e-mail
+  const params = {
+    Source: process.env.EMAIL_USER,
+    Destination: { ToAddresses: [msg.to] },
+    Message: {
+      Subject: { Data: msg.subject }, 
+      Body: {
+        Html: { Data: msg.html }, 
+        Text: { Data: msg.text || 'Por favor, verifique este e-mail em um cliente que suporte HTML.' }, 
       },
-      Content: {
-        Simple: {
-          Subject: { Data: msg.subject },  // Assunto do e-mail
-          Body: { Data: msg.html },  // Corpo do e-mail em HTML
-        },
-      },
-    };
-
-    // Enviando o e-mail com SESv2
-    await ses.sendEmail(params);
-  } catch (error) {
-    console.error("Erro ao enviar e-mail:", error);
-    throw new Error("Erro ao enviar o e-mail");
-  }
+    },
+  };
+  
+  const command = new SendEmailCommand(params);
+  await ses.send(command);
 };
 
 exports.register = async (req, res) => {
   const { name, Email, password, confirmpassword, phoneNumber, birthDate, userNeighborhood } = req.body;
 
   if (!name || !Email || !password || !confirmpassword) {
-    return res.status(422).json({ msg: "Todos os campos são obrigatórios" });
+    return res.status(422).json({ msg: 'Todos os campos são obrigatórios' });
   }
+
   if (password !== confirmpassword) {
-    return res.status(422).json({ msg: "As senhas não conferem" });
+    return res.status(422).json({ msg: 'As senhas não conferem' });
   }
 
   try {
     const params = {
-      TableName: "User",
-      IndexName: "Email-index",
-      KeyConditionExpression: "Email = :Email",
-      ExpressionAttributeValues: {
-        ":Email": Email,
-      },
+      TableName: 'User',
+      IndexName: 'Email-index',
+      KeyConditionExpression: 'Email = :Email',
+      ExpressionAttributeValues: { ':Email': Email },
     };
 
     const result = await dynamoDB.query(params);
     if (result.Items && result.Items.length > 0) {
-      return res.status(422).json({ msg: "O Email já está cadastrado" });
+      return res.status(422).json({ msg: 'O Email já está cadastrado' });
     }
 
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
-
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     const user = {
@@ -80,7 +70,7 @@ exports.register = async (req, res) => {
     };
 
     const putParams = {
-      TableName: "User",
+      TableName: 'User',
       Item: user,
     };
 
@@ -88,9 +78,9 @@ exports.register = async (req, res) => {
 
     const msg = {
       to: user.Email,
-      subject: "Verifique seu Email",
-      html: ` 
-         <!DOCTYPE html>
+      subject: 'Verifique seu Email',
+      html: `
+        <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
           <meta charset="UTF-8">
@@ -116,16 +106,13 @@ exports.register = async (req, res) => {
       `,
     };
 
-    // Enviar o e-mail através do SES com a função customizada
-    // await sendEmailWithSES(msg);
+    await sendEmailWithSES(msg);
 
-    res.status(201).json({ msg: "Usuário criado com sucesso. Verifique seu Email para confirmar sua conta." });
+    res.status(201).json({ msg: 'Usuário criado com sucesso. Verifique seu e-mail para confirmar sua conta.' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Erro interno no servidor" });
+    res.status(500).json({ msg: 'Erro ao registrar o usuário', error: error.message });
   }
 };
-
 
 exports.verifyEmail = async (req, res) => {
   const { Email, verificationCode } = req.body;
@@ -273,7 +260,6 @@ exports.forgotPassword = async (req, res) => {
 
     const msg = {
       to: result.Items[0].Email,
-      from: process.env.EMAIL_USER,
       subject: "Código de Recuperação de Senha",
       html: ` 
         <!DOCTYPE html>
@@ -297,7 +283,7 @@ exports.forgotPassword = async (req, res) => {
       `,
     };
 
-    await sgMail.send(msg);
+    await sendEmailWithSES(msg);
 
     res.status(200).json({ msg: "Código de recuperação enviado para o seu e-mail" });
   } catch (error) {
@@ -410,7 +396,6 @@ exports.resendVerificationEmail = async (req, res) => {
 
     const msg = {
       to: user.Email,
-      from: process.env.EMAIL_USER,
       subject: "Verifique seu Email",
       html: ` 
         <!DOCTYPE html>
@@ -439,7 +424,7 @@ exports.resendVerificationEmail = async (req, res) => {
       `,
     };
 
-    await sgMail.send(msg);
+    await sendEmailWithSES(msg);
 
     res.status(200).json({ msg: "Email de verificação reenviado com sucesso." });
   } catch (error) {
