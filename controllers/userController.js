@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require("uuid");
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { dynamoDB } = require("../config/db");
 const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
