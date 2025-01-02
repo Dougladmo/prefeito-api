@@ -3,11 +3,11 @@ const { v4: uuidv4 } = require("uuid");
 const {
   SESClient,
   SendEmailCommand,
-} = require("@aws-sdk/client-ses"); 
+} = require("@aws-sdk/client-ses");
 const TABLE_NAME = "guardReport";
 
 const sesClient = new SESClient({
-  region: "sa-east-1", 
+  region: "sa-east-1",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -45,7 +45,13 @@ async function sendEmailWithSES(report) {
                   <p style="font-size: 16px; color: #555;">Descrição: <strong>${report.description}</strong></p>
                   <p style="font-size: 16px; color: #555;">Localização: <strong>${report.location}</strong></p>
                   <p style="font-size: 16px; color: #555;">Status: <strong>${report.statusReport}</strong></p>
-                  <p style="font-size: 16px; color: #555;">Data: <strong>${new Date(report.date).toLocaleString('pt-BR')}</strong></p>
+                  <p style="font-size: 16px; color: #555;">Data: <strong>${new Date(report.createdAt).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }).replace(',', ' ')}</strong></p>
                 </div>
                 
                 <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px;">
