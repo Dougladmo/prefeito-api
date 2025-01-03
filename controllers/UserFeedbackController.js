@@ -6,14 +6,14 @@ const TABLE_NAME = "UserFeedback";
 const userFeedbackController = {
   async createFeedback(req, res) {
     try {
-      const { 
-        sportsAndLeisure, 
-        culture, 
-        education, 
-        health, 
-        safety, 
-        mobilityAndTraffic, 
-        publicWorksAndServices, 
+      const {
+        sportsAndLeisure,
+        culture,
+        education,
+        health,
+        safety,
+        mobilityAndTraffic,
+        publicWorksAndServices,
         comments
       } = req.body;
 
@@ -38,7 +38,7 @@ const userFeedbackController = {
       };
 
       await dynamoDB.put(params);
-      
+
       res.status(201).json({ msg: "Feedback criado com sucesso.", feedback });
     } catch (error) {
       console.error(error);
