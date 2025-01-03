@@ -14,8 +14,7 @@ const userFeedbackController = {
         safety, 
         mobilityAndTraffic, 
         publicWorksAndServices, 
-        comments, 
-        userId 
+        comments
       } = req.body;
 
       const createdAt = new Date().toISOString();
@@ -29,7 +28,7 @@ const userFeedbackController = {
         mobilityAndTraffic,
         publicWorksAndServices,
         comments,
-        userId,
+        userID: req.body.userId,
         createdAt,
       };
 
@@ -38,7 +37,7 @@ const userFeedbackController = {
         Item: feedback,
       };
 
-      await dynamoDB.put(params).promise();
+      await dynamoDB.put(params);
       
       res.status(201).json({ msg: "Feedback criado com sucesso.", feedback });
     } catch (error) {
