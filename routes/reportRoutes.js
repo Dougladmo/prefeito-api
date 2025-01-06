@@ -28,6 +28,8 @@ const {
   getPublicLightReportsByUserId
 } = require('../controllers/PublicLightingReport');
 
+const { getAllNews } = require('../controllers/cityNewsController')
+
 const { getAllReportsByUserId } = require("../controllers/usersReportController")
 
 const userFeedbackController = require('../controllers/UserFeedbackController');
@@ -58,5 +60,7 @@ router.get('/user/:userId', getAllReportsByUserId);
 
 router.post('/feedback', reportsMiddleware, userFeedbackController.createFeedback);
 router.get('/feedback', userFeedbackController.getAllFeedbacks);
+
+router.get('/News', getAllNews);
 
 module.exports = router;
