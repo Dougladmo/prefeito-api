@@ -8,6 +8,8 @@ router.post("/login", userController.login);
 router.post("/forgot-password", userController.forgotPassword); 
 router.post("/reset-password", userController.resetPassword); 
 
+router.put("/update-user", userController.updateUser); 
+
 router.post("/verify-email", userController.verifyEmail);
 
 router.post("/resend-verification-email", userController.resendVerificationEmail);

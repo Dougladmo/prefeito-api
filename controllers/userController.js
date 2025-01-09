@@ -461,6 +461,7 @@ exports.getUser = async (req, res) => {
     }
 
     const user = result.Item;
+
     // Removendo dados sensíveis
     delete user.password;
     delete user.verificationCode;
@@ -472,3 +473,51 @@ exports.getUser = async (req, res) => {
     res.status(500).json({ msg: "Erro ao buscar o usuário." });
   }
 };
+
+exports.updateUser = async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ msg: "Acesso negado. Token não fornecido." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const partKey = decoded._id;
+    const Email = decoded.Email;
+
+    const params = {
+      TableName: "User",
+      Key: {
+        _id: partKey,
+        Email: Email,
+      },
+    };
+
+    const result = await dynamoDB.get(params);
+
+    if (!result.Item) {
+      return res.status(404).json({ msg: "Usuário não encontrado." });
+    }
+
+    const updatedUser = { ...result.Item };
+
+    if (!updatedUser.pushToken && req.body.pushToken) {
+      updatedUser.pushToken = req.body.pushToken;
+    }
+
+    const updateParams = {
+      TableName: "User",
+      Item: updatedUser,
+    };
+
+    await dynamoDB.put(updateParams);
+
+    res.status(200).json({ msg: "Usuário atualizado com sucesso.", user: updatedUser.pushToken });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Erro ao atualizar o usuário." });
+  }
+};
+
+
