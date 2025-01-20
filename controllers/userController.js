@@ -520,4 +520,49 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+exports.removeUser = async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ msg: "Acesso negado. Token não fornecido." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const partKey = decoded._id;
+    const Email = decoded.Email;
+
+    const params = {
+      TableName: "User",
+      Key: {
+        _id: partKey,
+        Email: Email,
+      },
+    };
+
+    const result = await dynamoDB.get(params);
+
+    if (!result.Item) {
+      return res.status(404).json({ msg: "Usuário não encontrado." });
+    }
+
+    // Remover o usuário
+    const deleteParams = {
+      TableName: "User",
+      Key: {
+        _id: partKey,
+        Email: Email,
+      },
+    };
+
+    await dynamoDB.delete(deleteParams);
+
+    res.status(200).json({ msg: "Usuário removido com sucesso." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Erro ao remover o usuário." });
+  }
+};
+
+
 

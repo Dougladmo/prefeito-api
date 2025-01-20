@@ -13,6 +13,9 @@ connectDB();
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 
+const NotificationRoutes = require("./routes/NotificationRoutes");
+app.use("/notifications", NotificationRoutes);
+
 const reportRoutes = require("./routes/reportRoutes");
 app.use("/reports", reportRoutes);
 
