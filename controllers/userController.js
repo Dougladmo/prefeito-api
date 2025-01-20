@@ -546,7 +546,6 @@ exports.removeUser = async (req, res) => {
       return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
-    // Remover o usuário
     const deleteParams = {
       TableName: "User",
       Key: {
