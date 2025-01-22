@@ -30,14 +30,43 @@ const sendEmailWithSES = async (msg) => {
 };
 
 exports.register = async (req, res) => {
-  const { name, Email, password, confirmpassword, phoneNumber, birthDate, userNeighborhood } = req.body;
+  const {
+    name,
+    Email,
+    password,
+    confirmpassword,
+    phoneNumber,
+    birthDate,
+    userNeighborhood,
+    termsAccepted,
+  } = req.body;
 
-  if (!name || !Email || !password || !confirmpassword) {
-    return res.status(422).json({ msg: 'Todos os campos são obrigatórios' });
+  if (!name) {
+    return res.status(422).json({ msg: 'O campo nome é obrigatório' });
+  }
+  
+  if (!Email) {
+    return res.status(422).json({ msg: 'O campo e-mail é obrigatório' });
+  }
+  
+  if (!password) {
+    return res.status(422).json({ msg: 'O campo senha é obrigatório' });
+  }
+  
+  if (!birthDate) {
+    return res.status(422).json({ msg: 'O campo data de nascimento é obrigatório' });
+  }
+  
+  if (!userNeighborhood) {
+    return res.status(422).json({ msg: 'O campo bairro é obrigatório' });
+  }
+
+  if (!termsAccepted) {
+    return res.status(422).json({ msg: 'Você deve aceitar os Termos e Condições para se cadastrar.' });
   }
 
   if (password !== confirmpassword) {
-    return res.status(422).json({ msg: 'As senhas não conferem' });
+    return res.status(422).json({ msg: 'As senhas não conferem.' });
   }
 
   try {
@@ -50,11 +79,12 @@ exports.register = async (req, res) => {
 
     const result = await dynamoDB.query(params);
     if (result.Items && result.Items.length > 0) {
-      return res.status(422).json({ msg: 'O Email já está cadastrado' });
+      return res.status(422).json({ msg: 'O Email já está cadastrado.' });
     }
 
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
+
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     const user = {
@@ -67,6 +97,8 @@ exports.register = async (req, res) => {
       userNeighborhood,
       verificationCode,
       isVerified: false,
+      termsAccepted: true,
+      privacyPolicyAccepted: true,
       createdAt: new Date().toISOString(),
     };
 
@@ -89,19 +121,19 @@ exports.register = async (req, res) => {
           <title>Confirmação de E-mail</title>
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
-            <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
-              <h1 style="color: #333; text-align: center; margin-top: 15px; font-size: 22px;">Confirme seu Email</h1>
-              <p style="font-size: 16px; color: #555; text-align: center;">Use o código abaixo para confirmar seu email:</p>
-              <h2 style="font-size: 38px; text-align: center; color: #007bff;">${verificationCode}</h2>
-              <p style="font-size: 16px; color: #555; text-align: center; line-height: 1.5;">Esse código é válido por 15 minutos.</p>
-              <p style="font-size: 16px; color: #555; text-align: center; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
+            <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+                <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
+                <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
+                    <h1 style="color: #333; text-align: center; margin-top: 15px; font-size: 22px;">Confirme seu Email</h1>
+                    <p style="font-size: 16px; color: #555; text-align: center;">Use o código abaixo para confirmar seu email:</p>
+                    <h2 style="font-size: 38px; text-align: center; color: #007bff;">${verificationCode}</h2>
+                    <p style="font-size: 16px; color: #555; text-align: center; line-height: 1.5;">Esse código é válido por 15 minutos.</p>
+                    <p style="font-size: 16px; color: #555; text-align: center; line-height: 1.5;">Se você não solicitou essa confirmação, pode ignorar este email.</p>
+                </div>
+                <div>
+                    <p style="text-align: center; font-size: 12px; color: #555;">Se você tiver problemas com sua conta, entre em contato conosco.</p>
+                </div>
             </div>
-            <div>
-              <p style="text-align: center; font-size: 12px; color: #555;">Se você tiver problemas com sua conta, entre em contato conosco.</p>
-            </div>
-          </div>
         </body>
         </html>
       `,
@@ -114,6 +146,7 @@ exports.register = async (req, res) => {
     res.status(500).json({ msg: 'Erro ao registrar o usuário', error: error.message });
   }
 };
+
 
 exports.verifyEmail = async (req, res) => {
   const { Email, verificationCode } = req.body;
