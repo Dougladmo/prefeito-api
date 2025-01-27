@@ -122,7 +122,7 @@ exports.register = async (req, res) => {
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-                <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
+                <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 120px; margin-bottom: 20px;style="width: 120px; margin-bottom: 20px; background-color: #fff;">
                 <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
                     <h1 style="color: #333; text-align: center; margin-top: 15px; font-size: 22px;">Confirme seu Email</h1>
                     <p style="font-size: 16px; color: #555; text-align: center;">Use o código abaixo para confirmar seu email:</p>
@@ -305,7 +305,7 @@ exports.forgotPassword = async (req, res) => {
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
           <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
+            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 120px; margin-bottom: 20px;style="width: 120px; margin-bottom: 20px; background-color: #fff;">
             <h1 style="font-size: 24px; color: #333;">Redefinição de Senha</h1>
             <p style="font-size: 16px; color: #555;">Use o código abaixo para redefinir sua senha:</p>
             <h2 style="font-size: 28px; text-align: center; color: #007bff;">${resetCode}</h2>
@@ -441,7 +441,7 @@ exports.resendVerificationEmail = async (req, res) => {
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #ffffffd0; margin: 0; padding: 20px;">
           <div style="max-width: 600px; margin: auto; background: rgb(255, 255, 255); padding: 10px 25px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 100px;">
+            <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 120px; margin-bottom: 20px;style="width: 120px; margin-bottom: 20px; background-color: #fff;">
             <div style="margin-bottom: 25px; border-top: 1px solid #000; border-bottom: 1px solid #000;">
               <h1 style="color: #333; text-align: center; margin-top: 15px; font-size: 22px;">Confirme seu Email</h1>
               <p style="font-size: 16px; color: #555; text-align: center;">Use o código abaixo para confirmar seu email:</p>

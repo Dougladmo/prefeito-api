@@ -28,7 +28,7 @@ async function sendEmailWithSES(report) {
       Body: {
         Html: {
           Data: `
-            <!DOCTYPE html>
+             <!DOCTYPE html>
             <html lang="pt-BR">
             <head>
               <meta charset="UTF-8">
@@ -37,7 +37,7 @@ async function sendEmailWithSES(report) {
             </head>
             <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px;">
               <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-                <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 120px; margin-bottom: 20px;">
+                <img src="https://i.imgur.com/fNlG0zM.png" alt="logo c2a" style="width: 120px; margin-bottom: 20px;style="width: 120px; margin-bottom: 20px; background-color: #fff;"">
                 
                 <h1 style="color: #333; font-size: 24px; text-align: center;">Detalhes do Relatório de Trânsito</h1>
                 
@@ -63,7 +63,7 @@ async function sendEmailWithSES(report) {
         
                 <div style="margin-top: 30px; font-size: 14px; color: #555;">
                   <p style="text-align: center;">Se você tiver problemas com o seu relatório ou precisar de mais informações, entre em contato conosco.</p>
-                  <p style="text-align: center;">Atenciosamente,<br>Equipe de Suporte</p>
+                  <p style="text-align: center;">Atenciosamente,<br>Equipe de Suporte <br> suporte@c2a.com.br </p>
                 </div>
               </div>
             </body>
