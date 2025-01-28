@@ -139,7 +139,7 @@ exports.register = async (req, res) => {
       `,
     };
 
-    // await sendEmailWithSES(msg);
+    await sendEmailWithSES(msg);
 
     res.status(201).json({ msg: 'Usuário criado com sucesso. Verifique seu e-mail para confirmar sua conta.' });
   } catch (error) {
@@ -317,7 +317,7 @@ exports.forgotPassword = async (req, res) => {
       `,
     };
 
-    // await sendEmailWithSES(msg);
+    await sendEmailWithSES(msg);
 
     res.status(200).json({ msg: "Código de recuperação enviado para o seu e-mail" });
   } catch (error) {
@@ -458,7 +458,7 @@ exports.resendVerificationEmail = async (req, res) => {
       `,
     };
 
-    // await sendEmailWithSES(msg);
+    await sendEmailWithSES(msg);
 
     res.status(200).json({ msg: "Email de verificação reenviado com sucesso." });
   } catch (error) {
