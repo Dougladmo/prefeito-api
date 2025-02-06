@@ -130,6 +130,7 @@ async function sendEmailWithSES(report) {
   }
 }
 
+// POST
 exports.createReport = async (req, res) => {
   const allowedStatus = ["Em andamento", "Resolvido", "Não resolvido"];
 
@@ -160,6 +161,7 @@ exports.createReport = async (req, res) => {
   }
 };
 
+// GET
 exports.getAllReports = async (req, res) => {
   try {
     const params = {
@@ -173,6 +175,60 @@ exports.getAllReports = async (req, res) => {
   }
 };
 
+// PUT
+exports.updateReportById = async (req, res) => {
+  try {
+    const { id, createdAt } = req.params;
+    
+    const params = {
+      TableName: TABLE_NAME,
+      Key: {
+        _id: id,
+        createdAt: createdAt,
+      },
+      UpdateExpression: "set #description = :description, #location = :location, #statusReport = :statusReport",
+      ExpressionAttributeNames: {
+        "#description": "description",
+        "#location": "location",
+        "#statusReport": "statusReport",
+      },
+      ExpressionAttributeValues: {
+        ":description": req.body.description,
+        ":location": req.body.location,
+        ":statusReport": req.body.statusReport,
+      },
+      ReturnValues: "ALL_NEW",
+    };
+    
+    const result = await dynamoDB.update(params);
+    res.status(200).json(result.Attributes);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// DELETE
+exports.deleteReportById = async (req, res) => {
+  try {
+    const { id, createdAt } = req.params;
+
+    const params = {
+      TableName: TABLE_NAME,
+      Key: {
+        _id: id,
+        createdAt: createdAt,
+      },
+    };
+    
+    await dynamoDB.delete(params);
+    
+    res.status(204).json({ msg: "Relatório deletado com sucesso" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET
 exports.getReportsByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -198,6 +254,7 @@ exports.getReportsByUserId = async (req, res) => {
   }
 };
 
+// GET
 exports.getReportById = async (req, res) => {
   try {
     const { id, createdAt } = req.params;
@@ -215,57 +272,6 @@ exports.getReportById = async (req, res) => {
       return res.status(404).json({ message: 'Relatório não encontrado' });
     }
     res.status(200).json(result.Item);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.updateReportById = async (req, res) => {
-  try {
-    const { id, createdAt } = req.params;
-
-    const params = {
-      TableName: TABLE_NAME,
-      Key: {
-        _id: id,
-        createdAt: createdAt,
-      },
-      UpdateExpression: "set #description = :description, #location = :location, #statusReport = :statusReport",
-      ExpressionAttributeNames: {
-        "#description": "description",
-        "#location": "location",
-        "#statusReport": "statusReport",
-      },
-      ExpressionAttributeValues: {
-        ":description": req.body.description,
-        ":location": req.body.location,
-        ":statusReport": req.body.statusReport,
-      },
-      ReturnValues: "ALL_NEW",
-    };
-
-    const result = await dynamoDB.update(params);
-    res.status(200).json(result.Attributes);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
-
-exports.deleteReportById = async (req, res) => {
-  try {
-    const { id, createdAt } = req.params;
-
-    const params = {
-      TableName: TABLE_NAME,
-      Key: {
-        _id: id,
-        createdAt: createdAt,
-      },
-    };
-
-    await dynamoDB.delete(params);
-
-    res.status(204).json({ msg: "Relatório deletado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
